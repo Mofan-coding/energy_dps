@@ -1,6 +1,9 @@
 # simulate a trained policy
 # compare with exogenous 
 
+# 结果：1. boxplot图： 不同 scenario（No Transition, Slow Transition, Fast Transition）和不同策略（exogenous, policy）下的 Net Present Cost 分布（箱线图）
+# 2. GIF动画和面积图 ： 在if scneario == 'fast' 更改成slow/no
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -21,8 +24,12 @@ simulate = True
 # select the number of cost projection simulations
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
-nsim = 10
-savegif = False
+
+nsim = 100
+savegif = True  # individual simulation dynamics 
+savebox= False # boxplot of costs 
+save_sharebox = True  #Boxplot of End-of-Century Generation Share
+save_pc = True  #Parallel Coordinates Plot
 
 
 # create labels for different cost assumptions
@@ -66,11 +73,14 @@ if simulate:
                     slack = _energy_sim_params.scenarios[scenario][1],
                     costparams = _energy_sim_params.costsAssumptions['Way et al. (2022)'],)
 
-        ## simulate model
+        ######## simulate model
+
 
         # set simulation mode
         model.mode = 'exogenous'
         np.random.seed(0)
+        
+        
         for n in range(nsim):
             # for each cost assumption, compute total costs
             # and append it to the dictionary
@@ -80,7 +90,13 @@ if simulate:
                 tcosts[l][scenario].append( 1e-12 * model.simulate())
                 if scenario == 'fast transition' and savegif:
                     print("saving the figure...")
-                    model.make_gif('static'+str(n))
+                    #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergyBySource(filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+               
+
 
         # set policy mode
         model.mode = 'policy'
@@ -90,6 +106,7 @@ if simulate:
 
         # run multiple iterations to explore cost parameters' uncertainty
         np.random.seed(0)
+        all_shares = []
         for n in range(nsim):
             # for each cost assumption, compute total costs
             # and append it to the dictionary
@@ -99,9 +116,68 @@ if simulate:
                 tcosts[l+' - decision rule'][scenario].append( 1e-12 * model.simulate())
                 if scenario == 'fast transition' and savegif:
                     print("saving the figure...")
-                    model.make_gif('dynamic'+str(n))
+                    #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergyBySource(filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    shares_df = model.get_generation_shares()
+                    #print(shares_df)
+                    all_shares.append(shares_df)
+        
+        if scenario == "fast transition":
 
-    # # create dataframe from dictionary, update columns,
+            if save_sharebox:
+                ## make share boxplot (end-of-century share for each tech, all simulations)
+                #only for policy model: since exogenous, same energy transition pathway
+
+                # Get the last year from each simulation
+                last_year = model.yend
+                box_data = pd.DataFrame([df.loc[last_year] for df in all_shares])
+                techs = box_data.columns.tolist()
+
+                colors = ['black','saddlebrown','darkgray',
+                        'saddlebrown','darkgray',
+                        'magenta','royalblue',
+                        'forestgreen','deepskyblue',
+                        'orange','pink','plum','lawngreen', 'burlywood']
+                
+                plt.figure(figsize=(14,6))
+                box = plt.boxplot([box_data[t] for t in techs], patch_artist=True, labels=techs)
+                for patch, color in zip(box['boxes'], colors):
+                    patch.set_facecolor(color)
+                plt.ylabel('Share of Final Energy in 2100')
+                plt.xlabel('Technology')
+                plt.title('Distribution of End-of-Century Generation Share by Technology')
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                plt.savefig('./figures/end_century_share_boxplot.png')
+                plt.show()
+          
+            if save_pc:
+
+                # parallel coordinates, only for dps
+                # Each line is a simulation, each axis is a technology, value is the share in 2100.
+
+                from pandas.plotting import parallel_coordinates
+                pc_data = box_data.copy()
+                pc_data['sim'] = pc_data.index.astype(str)
+                plt.figure(figsize=(14,6))
+                parallel_coordinates(pc_data, 'sim', color=plt.cm.tab20.colors, alpha=0.3)
+                plt.ylabel('Share of Final Energy in 2100')
+                plt.xlabel('Technology')
+                plt.title('Parallel Coordinates Plot: End-of-Century Generation Share')
+                plt.xticks(rotation=45)
+                plt.legend([],[], frameon=False)
+                plt.tight_layout()
+                plt.savefig('./figures/end_century_share_parallelcoords.png')
+                plt.show()
+
+
+        
+        
+
+    # # create cost dataframe from dictionary, update columns,
     # #  and focus on relevant scenarios
     df = pd.DataFrame(tcosts).stack().explode().reset_index()
     df.columns = ['Scenario',
@@ -109,76 +185,85 @@ if simulate:
                 'Net Present Cost [trillion USD]']
     df = df.loc[~df['Scenario'].str.contains('nuclear|historical') ]
 
+
 if savegif:
     plt.close("all")
 
-# convert scenario name to Sentence case formatting
-df['Scenario'] = df['Scenario'].str.title()
 
-# create figure
-fig = plt.figure(figsize=(15,6))
 
-# add boxplots
-ax = sns.boxplot(data=df, 
-                    hue='Scenario', 
-                    y='Net Present Cost [trillion USD]', 
-                    x='Learning rate assumptions', 
-                    hue_order=['No Transition',
-                                'Slow Transition', 
-                                'Fast Transition'],
-                    width=0.5, 
-                    whis=(5,95),
-                    linewidth=1.75,
-                    palette='colorblind', 
-                    gap = 0.2,
-                    **{'showfliers':False})
 
-ax.set_xlabel('')
 
-# set x-axis labels
-ax.set_xticks(ax.get_xticks(),
-              [label.get_text().replace(' - ', '\n') 
-               for label in ax.get_xticklabels()])
+# make box plot of costs under fast, slow, no transition scenarios
 
-# move legend on the bottom
-sns.move_legend(ax, "lower center", 
-                ncol=3, bbox_to_anchor=(0.5, -0.6))
+if savebox:
 
-# adjust figure
-fig.subplots_adjust(bottom=0.375, top=0.95, 
-                    left=0.075, right=0.95)
+    # convert scenario name to Sentence case formatting
+    df['Scenario'] = df['Scenario'].str.title()
 
-# add axes explaining boxplot
-axes = fig.add_axes([0.8, -0.05, 0.2, 0.35])
-axes.grid(False)
-axes.set_axis_off()
-axes.plot([0,.5], [1,1], color='black')
-axes.plot([0,.5,.5,0,0], [0.5,0.5,1.5,1.5,0.5], color='black')
-axes.fill_between([0,.5], [.5,.5], [1.5,1.5], color='black', alpha=.2)
-axes.plot([0,.5], [0,0], color='black')
-axes.plot([0,.5], [2,2], color='black')
-axes.plot([0.25,0.25], [0,.5], color='black')
-axes.plot([0.25,0.25], [1.5,2], color='black')
-axes.set_ylim(-1,3)
-axes.set_xlim(-1.8,3)
-fontsize = 14
-axes.annotate('50%', xy=(-.5,1),
-                    ha='center', va='center',
-                    xycoords='data', 
-                    fontsize=fontsize)
-axes.annotate('90%', xy=(-1.5,1),
-                    ha='center', va='center',
-                    xycoords='data',
-                    fontsize=fontsize)
-axes.annotate('Median', xy=(.6,1),
-                ha='left', va='center',
-                    xycoords='data',
-                    fontsize=fontsize)
-axes.plot([-.1,-.5,-.5], [1.5,1.5,1.25], color='black')
-axes.plot([-.1,-.5,-.5], [.5,.5,.75], color='black')
-axes.plot([-.1,-1.5,-1.5], [2,2,1.25], color='silver')
-axes.plot([-.1,-1.5,-1.5], [0,0,.75], color='silver')
+    # create figure
+    fig = plt.figure(figsize=(15,6))
 
-fig.savefig("./figures/total_discounted_costs.pdf")
+    # add boxplots
+    ax = sns.boxplot(data=df, 
+                        hue='Scenario', 
+                        y='Net Present Cost [trillion USD]', 
+                        x='Learning rate assumptions', 
+                        hue_order=['No Transition',
+                                    'Slow Transition', 
+                                    'Fast Transition'],
+                        width=0.5, 
+                        whis=(5,95),
+                        linewidth=1.75,
+                        palette='colorblind', 
+                        gap = 0.2,
+                        **{'showfliers':False})
 
-plt.show()
+    ax.set_xlabel('')
+
+    # set x-axis labels
+    ax.set_xticks(ax.get_xticks(),
+                [label.get_text().replace(' - ', '\n') 
+                for label in ax.get_xticklabels()])
+
+    # move legend on the bottom
+    sns.move_legend(ax, "lower center", 
+                    ncol=3, bbox_to_anchor=(0.5, -0.6))
+
+    # adjust figure
+    fig.subplots_adjust(bottom=0.375, top=0.95, 
+                        left=0.075, right=0.95)
+
+    # add axes explaining boxplot
+    axes = fig.add_axes([0.8, -0.05, 0.2, 0.35])
+    axes.grid(False)
+    axes.set_axis_off()
+    axes.plot([0,.5], [1,1], color='black')
+    axes.plot([0,.5,.5,0,0], [0.5,0.5,1.5,1.5,0.5], color='black')
+    axes.fill_between([0,.5], [.5,.5], [1.5,1.5], color='black', alpha=.2)
+    axes.plot([0,.5], [0,0], color='black')
+    axes.plot([0,.5], [2,2], color='black')
+    axes.plot([0.25,0.25], [0,.5], color='black')
+    axes.plot([0.25,0.25], [1.5,2], color='black')
+    axes.set_ylim(-1,3)
+    axes.set_xlim(-1.8,3)
+    fontsize = 14
+    axes.annotate('50%', xy=(-.5,1),
+                        ha='center', va='center',
+                        xycoords='data', 
+                        fontsize=fontsize)
+    axes.annotate('90%', xy=(-1.5,1),
+                        ha='center', va='center',
+                        xycoords='data',
+                        fontsize=fontsize)
+    axes.annotate('Median', xy=(.6,1),
+                    ha='left', va='center',
+                        xycoords='data',
+                        fontsize=fontsize)
+    axes.plot([-.1,-.5,-.5], [1.5,1.5,1.25], color='black')
+    axes.plot([-.1,-.5,-.5], [.5,.5,.75], color='black')
+    axes.plot([-.1,-1.5,-1.5], [2,2,1.25], color='silver')
+    axes.plot([-.1,-1.5,-1.5], [0,0,.75], color='silver')
+
+    fig.savefig("./figures/total_discounted_costs.pdf")
+
+    plt.show()
