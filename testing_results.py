@@ -26,10 +26,12 @@ simulate = True
 # used only if new simulations are run
 
 nsim = 100
-savegif = True  # individual simulation dynamics 
-savebox= False # boxplot of costs 
-save_sharebox = True  #Boxplot of End-of-Century Generation Share
-save_pc = True  #Parallel Coordinates Plot
+label = '072301'
+savegif = False  # individual simulation dynamics 
+savebox= True # boxplot of costs 
+save_sharebox = False  #Boxplot of End-of-Century Generation Share
+save_pc = False  #Parallel Coordinates Plot
+
 
 
 # create labels for different cost assumptions
@@ -102,8 +104,8 @@ if simulate:
         model.mode = 'policy'
 
         # load policy file
-        model.policy.load('energySim' + os.path.sep + 'fast_transition_policy_new.pth')
-
+        #model.policy.load('energySim' + os.path.sep + 'fast_transition_policy_new.pth')
+        policy_path = f'results/{label}_fast_transition_policy.pth'
         # run multiple iterations to explore cost parameters' uncertainty
         np.random.seed(0)
         all_shares = []
@@ -264,6 +266,10 @@ if savebox:
     axes.plot([-.1,-1.5,-1.5], [2,2,1.25], color='silver')
     axes.plot([-.1,-1.5,-1.5], [0,0,.75], color='silver')
 
-    fig.savefig("./figures/total_discounted_costs.pdf")
+    save_dir = f"./results/figures/{label}"
+    os.makedirs(save_dir, exist_ok=True)
+    fig.savefig(f"{save_dir}/total_discounted_costs.pdf")   
+
+    #fig.savefig(f"./results/figures/total_discounted_costs.pdf")
 
     plt.show()
