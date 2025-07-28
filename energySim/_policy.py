@@ -185,7 +185,7 @@ class SNES:
             if all((torch.abs(self.mu) + self.sigma)/torch.abs(self.mu) < 1.01):
                 break
         fig, ax = plt.subplots()
-        plt.plot(objs)
+        plt.plot(np.arange(40, len(objs)))
         plt.xlabel('Iteration')
         plt.ylabel('Objective')
         save_dir = f'results/figures/{label}'
