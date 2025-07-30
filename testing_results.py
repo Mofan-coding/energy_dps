@@ -26,9 +26,9 @@ simulate = True
 # used only if new simulations are run
 
 nsim =3
-label = '072901'
+label = '072902'
 savegif = True# individual simulation dynamics 
-savebox= False # boxplot of costs 
+savebox= False# boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 

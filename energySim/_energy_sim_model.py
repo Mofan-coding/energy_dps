@@ -36,7 +36,7 @@ class EnergyModel:
         self.slack = slack
 
         # define final year of simulation
-        self.yend = 2050
+        self.yend = 2100
 
         # initial year
         self.y0 = 2020
@@ -44,7 +44,7 @@ class EnergyModel:
         # year counter
         self.y = self.y0
 
-        self.policy_cache = {}  #cache gt of each tech of last decision year
+        #self.policy_cache = {}  #cache gt of each tech of last decision year
 
         # initialize demand dict, 
         # each key is a sector and the item is an array

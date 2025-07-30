@@ -195,6 +195,8 @@ class SNES:
         plt.savefig(f'{save_dir}/objective_vs_iteration.png')
         plt.close(fig)
         #plt.show()
+        # 保存objs数组
+        np.save(f'{save_dir}/objective_vs_iteration.npy', objs)
         
         with torch.no_grad(): #关闭梯度计算，只是赋值，不需要反向传播
             # set parameters of policy
