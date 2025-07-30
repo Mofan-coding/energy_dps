@@ -9,7 +9,7 @@ import os
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '072701'
+label = '072901'
 scenario = 'fast transition'
 
 model = _energy_sim_model.EnergyModel(

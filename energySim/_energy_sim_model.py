@@ -296,7 +296,7 @@ class EnergyModel:
         plt.xlabel('Year')
         plt.title('Demand')
 
-    def plotFinalEnergyBySource(self,filename = None):
+    def plotFinalEnergyBySource(self,label, filename = None):
         colors = ['black','saddlebrown','darkgray',
                   'saddlebrown','darkgray',
                   'magenta','royalblue',
@@ -337,7 +337,7 @@ class EnergyModel:
         fig.legend(handles, labels, loc='lower center', ncol=4, bbox_to_anchor=(0.5, -0.15))
         plt.tight_layout(rect=[0, 0.05, 1, 1])  # leave space at the bottom for the legend
         if filename:
-            plt.savefig(f'./figures/{filename}.png', dpi=300, bbox_inches='tight')
+            plt.savefig(f'results/figures/{label}/{filename}.png', dpi=300, bbox_inches='tight')
             plt.close(fig)
         return    #其他图不画也不保存
 
@@ -1011,6 +1011,8 @@ class EnergyModel:
                 # 5) time
 
                 # decide every 5 year 
+                """
+               
                 if t not in self.policy_cache or (self.y - self.y0) % 5 == 0:
                     if self.y == self.y0:
                         pol_input = [np.log10(self.c[t][self.y-self.y0]),
@@ -1038,6 +1040,32 @@ class EnergyModel:
                     self.policy_cache[t] = (self.y, gt)
                 else:
                     gt = self.policy_cache[t][1]
+                
+                """
+                if self.y == self.y0:
+                    pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                                    np.log10(self.z[t][self.y-self.y0])/10,
+                                    (self.y-self.y0)/(self.yend-self.y0),
+                                    10*(sum([self.q[self.technology[x]][self.y-self.y0] \
+                                            for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                                                self.elec[self.y-self.y0] - 1),
+                                    self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                    ]
+                else:
+                    pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                                    np.log10(self.z[t][self.y-self.y0])/10,
+                                    (self.y-self.y0)/(self.yend-self.y0),
+                                    10*((sum([self.q[self.technology[x]][self.y-self.y0] \
+                                            for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                                                self.elec[self.y-self.y0] - 1)),
+                                    self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                    ]
+                
+                ## linear policy
+                gt = self.policy.get_action(pol_input)
+                gt = min(1.0, gt)
+               
+
 
                 # try:
                 #     pols_inputs = pd.read_csv('pols_inputs.csv')

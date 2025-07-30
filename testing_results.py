@@ -25,10 +25,10 @@ simulate = True
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
 
-nsim = 100
-label = '072301'
-savegif = False  # individual simulation dynamics 
-savebox= True # boxplot of costs 
+nsim =3
+label = '072701'
+savegif = True # individual simulation dynamics 
+savebox= False # boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
@@ -93,7 +93,7 @@ if simulate:
                 if scenario == 'fast transition' and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotFinalEnergyBySource(filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
+                    model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
@@ -119,7 +119,7 @@ if simulate:
                 if scenario == 'fast transition' and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotFinalEnergyBySource(filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
