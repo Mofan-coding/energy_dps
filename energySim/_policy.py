@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import ray
 import os
 
+np.random.seed(0)
+
 class DeterministicActor(torch.nn.Module):
     def __init__(self, state_dim, action_dim, hidden_size=None):
         super(DeterministicActor, self).__init__()
@@ -75,7 +77,7 @@ class EvolutionStrategies:
                                     + self.mu[param]
             self.actor.load_state_dict(sample)
             simobjs = np.empty(self.batch_size)
-            # np.random.seed(0)
+            #np.random.seed(0)
             for b in range(self.batch_size):
                 simobjs[b] = self.env.simulate()
             # plt.figure()
@@ -229,7 +231,7 @@ class SNES:
 
                     self.actor.load_state_dict(new_pol)
                     simobjs = np.empty(self.batch_size)
-                    np.random.seed(0)
+                    #np.random.seed(0)
                     for b in range(self.batch_size): # 仿真batch——size次
                         simobjs[b] = self.env.simulate()
                     # plt.figure()

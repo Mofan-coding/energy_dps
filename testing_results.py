@@ -26,8 +26,8 @@ simulate = True
 # used only if new simulations are run
 
 nsim =3
-label = '072701'
-savegif = True # individual simulation dynamics 
+label = '072901'
+savegif = True# individual simulation dynamics 
 savebox= False # boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
@@ -201,6 +201,8 @@ if savebox:
 
     # convert scenario name to Sentence case formatting
     df['Scenario'] = df['Scenario'].str.title()
+    # 只保留 No Transition 和 Fast Transition
+    #df = df[~df['Scenario'].str.contains('Slow Transition')]
 
     # create figure
     fig = plt.figure(figsize=(15,6))
@@ -211,7 +213,8 @@ if savebox:
                         y='Net Present Cost [trillion USD]', 
                         x='Learning rate assumptions', 
                         hue_order=['No Transition',
-                                    'Slow Transition', 
+                                   'Slow Transition',
+                          
                                     'Fast Transition'],
                         width=0.5, 
                         whis=(5,95),
