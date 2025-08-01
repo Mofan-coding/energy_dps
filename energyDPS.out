@@ -1,1 +1,2 @@
-Policy saved to results/073001_fast transition_policy.pth
+[33m(raylet)[0m WARNING: 16 PYTHON worker processes have been started on node: bccafda947d450d07a06801e0fd3f5b28708868a9589621bd7851421 with address: 10.19.8.56. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
+Policy saved to results/080102_fast transition_policy.pth
