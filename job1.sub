@@ -20,4 +20,4 @@ source ~/endps/bin/activate
 
 
 # Run your training script
-python train_policy.py
+python train_policy_073001.py
