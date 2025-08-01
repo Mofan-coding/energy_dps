@@ -25,10 +25,10 @@ simulate = True
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
 
-nsim =3
-label = '072902'
-savegif = True# individual simulation dynamics 
-savebox= False# boxplot of costs 
+nsim =100
+label = '073001'
+savegif = False# individual simulation dynamics 
+savebox= True# boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
