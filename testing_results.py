@@ -26,10 +26,10 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '073001'
-savegif = False# individual simulation dynamics 
-savebox= True# boxplot of costs 
-save_sharebox = False  #Boxplot of End-of-Century Generation Share
+label = '080103'
+savegif = True# individual simulation dynamics 
+savebox= False# boxplot of costs 
+save_sharebox = True  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
 
@@ -93,7 +93,7 @@ if simulate:
                 if scenario == 'fast transition' and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
-                    model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
@@ -105,7 +105,8 @@ if simulate:
 
         # load policy file
         #model.policy.load('energySim' + os.path.sep + 'fast_transition_policy_new.pth')
-        policy_path = f'results/{label}_fast_transition_policy.pth'
+        policy_path = f'results/{label}_fast transition_policy.pth'
+        model.policy.load(policy_path)
         # run multiple iterations to explore cost parameters' uncertainty
         np.random.seed(0)
         all_shares = []
@@ -119,7 +120,7 @@ if simulate:
                 if scenario == 'fast transition' and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
-                    model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
@@ -135,6 +136,7 @@ if simulate:
 
                 # Get the last year from each simulation
                 last_year = model.yend
+                
                 box_data = pd.DataFrame([df.loc[last_year] for df in all_shares])
                 techs = box_data.columns.tolist()
 
@@ -153,8 +155,31 @@ if simulate:
                 plt.title('Distribution of End-of-Century Generation Share by Technology')
                 plt.xticks(rotation=45)
                 plt.tight_layout()
-                plt.savefig('./figures/end_century_share_boxplot.png')
+                #plt.savefig('./figures/end_century_share_boxplot.png')
+                
+                plt.savefig(f'results/figures/{label}/end_century_share_boxplot.png')
+           
                 plt.show()
+
+                # plot mid century share
+         
+                mid_year = 2050
+                box_data = pd.DataFrame([df.loc[mid_year] for df in all_shares])
+                techs = box_data.columns.tolist()
+
+                
+                plt.figure(figsize=(14,6))
+                box = plt.boxplot([box_data[t] for t in techs], patch_artist=True, labels=techs)
+                for patch, color in zip(box['boxes'], colors):
+                    patch.set_facecolor(color)
+                plt.ylabel('Share of Final Energy in 2050')
+                plt.xlabel('Technology')
+                plt.title('Distribution of Mid-of-Century Generation Share by Technology ')
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                plt.savefig(f'results/figures/{label}/mid_century_share_boxplot.png')
+                plt.show()
+          
           
             if save_pc:
 

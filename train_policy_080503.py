@@ -9,8 +9,8 @@ import os
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '080103'
-scenario = 'fast transition'
+label = '080503'
+scenario = 'no transition'
 
 model = _energy_sim_model.EnergyModel(
     EFgp=_energy_sim_params.scenarios[scenario][0],
