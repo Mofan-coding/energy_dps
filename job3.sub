@@ -15,4 +15,4 @@ module load python/3.9.0
 
 source ~/endps/bin/activate
 
-python train_policy_080503.py
+python train_policy_03.py

@@ -618,12 +618,42 @@ class EnergyModel:
         ax.set_xlabel('Year')
         ax.set_yscale('log', base=10)
 
-    def plotFinalEnergy(self):
+    def plotFinalEnergy(self, label, filename = None):
         df = pd.DataFrame(self.EF, 
                           index=range(self.y0,self.yend + 1), 
                             columns=self.EF.keys())
         df.columns = \
             [str(a[0]+'_'+a[1]) for a in df.columns.to_flat_index()]
+        
+        sectors = self.sector
+        colors=['black','saddlebrown',
+                                 'darkgray','lightskyblue','lime']
+
+        legend_labels = ['oil', 'coal', 'gas', 'electricity', 'P2Xfuel']
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10), sharex=True)
+        for i, s in enumerate(sectors):
+            ax = axes[i // 2, i % 2]
+            df_ = df[[x for x in df.columns if x.split('_')[1] == s]].copy()
+            df_.plot.area(stacked=True, lw=0, color=colors, ax=ax, legend=False)
+            ax.set_title(f'Final energy - {s}')
+            ax.set_xlim(2018, 2075)
+            ax.set_ylim(0, 300)
+            ax.set_ylabel('EJ')
+            ax.set_xlabel('Year')
+            if i == 0:
+                handles, _ = ax.get_legend_handles_labels()
+        # 在整个figure底部放legend
+        if handles:
+            fig.legend(handles, legend_labels, loc='lower center', ncol=len(legend_labels), bbox_to_anchor=(0.5, -0.05))
+        fig.tight_layout()
+        if filename:
+            save_dir = f'results/figures/{label}'
+            plt.savefig(f'{save_dir}/{filename}_finalenergyBySector.png', dpi=300, bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+        
+        
         for s in self.sector:
             df_ = df[[x for x in df.columns if x.split('_')[1]==s]].copy()
             df_.plot.area(stacked=True, lw=0, 
@@ -1078,8 +1108,20 @@ class EnergyModel:
                 #     pols_inputs.to_csv('pols_inputs.csv', index=False)
 
                 # compute generation from technology
+
+                # --- add cap logic as in exogenous --
+
+                    # get growth rate parameters
+                try:
+                    gt0, gT, t1, t2, t3, psi = self.EFgp[t,'electricity']
+                # if growth parameters not available, 
+                # consider no useful energy from that carrier
+                except KeyError:
+                    self.q[t][self.y+1-self.y0] = 0.0
+                    continue
                 qp = self.q[t][self.y-self.y0]
-                qf = qp * (1 + gt)
+                #qf = qp * (1 + gt)
+                qf = min(qp * (1 + gt), maxcap)
                 self.q[t][self.y+1-self.y0] = max(0, qf)
 
         # 7 Calculate the quantities of fossil fuel energy carriers

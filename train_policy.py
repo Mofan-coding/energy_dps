@@ -9,7 +9,7 @@ import os
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '073003'
+label = '0807test'
 scenario = 'fast transition'
 
 model = _energy_sim_model.EnergyModel(
@@ -19,8 +19,8 @@ model = _energy_sim_model.EnergyModel(
 )
 
 model.mode = 'policy'
-model.policy.train(label, iter=10000, batch_size=64, popsize=16, dist=False) #pop size不大于 cpus-per-task
-#model.policy.train(label, iter = 2, batch_size = 2,popsize = 2, dist = True)
+#model.policy.train(label, iter=10000, batch_size=64, popsize=16, dist=False) #pop size不大于 cpus-per-task
+model.policy.train(label, iter = 2, batch_size = 2,popsize = 2, dist = True)
 os.makedirs('results', exist_ok=True)
 policy_path = f'results/{label}_{scenario}_policy.pth'
 model.policy.save(policy_path)

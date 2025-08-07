@@ -25,11 +25,14 @@ simulate = True
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
 
-nsim =100
-label = '080103'
+nsim =1
+label = '080503'
+sim_scenario = 'no transition'
+
+
 savegif = True# individual simulation dynamics 
 savebox= False# boxplot of costs 
-save_sharebox = True  #Boxplot of End-of-Century Generation Share
+save_sharebox = False #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
 
@@ -90,10 +93,11 @@ if simulate:
             for l in labels:
                 print("simulating...")
                 tcosts[l][scenario].append( 1e-12 * model.simulate())
-                if scenario == 'fast transition' and savegif:
+                if scenario == sim_scenario and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
                     #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
+                    model.plotFinalEnergy(label,filename=f'{n}_static_{scenario.replace(" ", "_")}_{n}')
                     #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
@@ -105,7 +109,7 @@ if simulate:
 
         # load policy file
         #model.policy.load('energySim' + os.path.sep + 'fast_transition_policy_new.pth')
-        policy_path = f'results/{label}_fast transition_policy.pth'
+        policy_path = f'results/{label}_{sim_scenario}_policy.pth'
         model.policy.load(policy_path)
         # run multiple iterations to explore cost parameters' uncertainty
         np.random.seed(0)
@@ -117,10 +121,12 @@ if simulate:
             for l in labels:
                 print("simulating...")
                 tcosts[l+' - decision rule'][scenario].append( 1e-12 * model.simulate())
-                if scenario == 'fast transition' and savegif:
+                if scenario == sim_scenario  and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
                     #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
+                    
                     #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
@@ -128,7 +134,7 @@ if simulate:
                     #print(shares_df)
                     all_shares.append(shares_df)
         
-        if scenario == "fast transition":
+        if scenario == sim_scenario :
 
             if save_sharebox:
                 ## make share boxplot (end-of-century share for each tech, all simulations)
