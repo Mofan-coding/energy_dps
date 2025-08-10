@@ -1,5 +1,1 @@
-[33m(raylet)[0m WARNING: 18 PYTHON worker processes have been started on node: 4a1fd0ee7821058bfefa7ac7b0a9031a3eb4c96e0c94f2d41f844ebe with address: 10.19.9.68. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
-Policy saved to results/080503_no transition_policy.pth
-[33m(raylet)[0m WARNING: 20 PYTHON worker processes have been started on node: 4a1fd0ee7821058bfefa7ac7b0a9031a3eb4c96e0c94f2d41f844ebe with address: 10.19.9.68. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
-[33m(raylet)[0m WARNING: 16 PYTHON worker processes have been started on node: 18ccc7dc0fced433ae0cb78a83fab0b14ff29d54debe45d1d5d13da9 with address: 10.19.8.55. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
-Policy saved to results/080502_slow transition_policy.pth
+Policy saved to results/080701_fast transition_policy.pth
