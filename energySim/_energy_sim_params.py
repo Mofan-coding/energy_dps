@@ -245,6 +245,8 @@ costparams['sigma']['nuclear electricity'] = 0.02
 costparams['omega']['hydroelectricity'] = 0.0
 costparams['sigmaOmega']['hydroelectricity'] = 0.01
 costparams['sigma']['hydroelectricity'] = 0.01
+
+"""
 costparams['omega']['biopower electricity'] = 0.05
 costparams['sigmaOmega']['biopower electricity'] = 0.01
 costparams['sigma']['biopower electricity'] = 0.02
@@ -254,6 +256,16 @@ costparams['sigma']['wind electricity'] = 0.065
 costparams['omega']['solar pv electricity'] = 0.319
 costparams['sigmaOmega']['solar pv electricity'] = 0.043
 costparams['sigma']['solar pv electricity'] = 0.111
+"""
+omega_common = 0.3
+sigmaOmega_common = 0.04
+sigma_common = 0.06
+for t in ['biopower electricity', 'wind electricity', 'solar pv electricity']:
+    costparams['omega'][t] = omega_common
+    costparams['sigmaOmega'][t] = sigmaOmega_common
+    costparams['sigma'][t] = sigma_common
+
+
 costparams['omega']['daily batteries'] = 0.421
 costparams['sigmaOmega']['daily batteries'] = 0.063
 costparams['sigma']['daily batteries'] = 0.103

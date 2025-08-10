@@ -25,13 +25,13 @@ simulate = True
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
 
-nsim =1
-label = '080503'
+nsim =2
+label = '080903'
 sim_scenario = 'no transition'
 
 
 savegif = True# individual simulation dynamics 
-savebox= False# boxplot of costs 
+savebox= False # boxplot of costs 
 save_sharebox = False #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
@@ -96,7 +96,7 @@ if simulate:
                 if scenario == sim_scenario and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
+                    model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
                     model.plotFinalEnergy(label,filename=f'{n}_static_{scenario.replace(" ", "_")}_{n}')
                     #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
@@ -124,7 +124,7 @@ if simulate:
                 if scenario == sim_scenario  and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
                     
                     #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')

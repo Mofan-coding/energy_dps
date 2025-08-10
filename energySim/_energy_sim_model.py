@@ -1125,8 +1125,8 @@ class EnergyModel:
                     maxcap = self.elec[self.y+1-self.y0]
 
                 qp = self.q[t][self.y-self.y0]
-                #qf = qp * (1 + gt)
-                qf = max(0, min(qp * (1 + gt), maxcap))
+                qf = qp * (1 + gt)
+                #qf = min(qp * (1 + gt), maxcap)
                 self.q[t][self.y+1-self.y0] = max(0, qf)
 
         # 7 Calculate the quantities of fossil fuel energy carriers
