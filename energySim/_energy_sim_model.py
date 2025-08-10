@@ -1111,7 +1111,7 @@ class EnergyModel:
 
                 # --- add cap logic as in exogenous --
 
-                    # get growth rate parameters
+                # get growth rate parameters
                 try:
                     gt0, gT, t1, t2, t3, psi = self.EFgp[t,'electricity']
                 # if growth parameters not available, 
@@ -1119,9 +1119,14 @@ class EnergyModel:
                 except KeyError:
                     self.q[t][self.y+1-self.y0] = 0.0
                     continue
+                if self.y - self.y0 > t3:
+                    maxcap = psi * self.elec[self.y+1-self.y0]
+                else:
+                    maxcap = self.elec[self.y+1-self.y0]
+
                 qp = self.q[t][self.y-self.y0]
                 #qf = qp * (1 + gt)
-                qf = min(qp * (1 + gt), maxcap)
+                qf = max(0, min(qp * (1 + gt), maxcap))
                 self.q[t][self.y+1-self.y0] = max(0, qf)
 
         # 7 Calculate the quantities of fossil fuel energy carriers
