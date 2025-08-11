@@ -44,7 +44,7 @@ class EnergyModel:
         # year counter
         self.y = self.y0
 
-        self.policy_cache = {}  #cache gt of each tech of last decision year
+        #self.policy_cache = {}  #cache gt of each tech of last decision year
 
         # initialize demand dict, 
         # each key is a sector and the item is an array
@@ -245,7 +245,7 @@ class EnergyModel:
                                   action_dim=1,
                                   env=self, 
                                   iter=100,
-                                  hidden_size=1)
+                                  hidden_size=16)
 
     def sample_uncertainties(self):
 
@@ -1041,7 +1041,7 @@ class EnergyModel:
                 # 5) time
 
                 # decide every 5 year 
-                
+                """
                
                 if t not in self.policy_cache or (self.y - self.y0) % 5 == 0:
                     if self.y == self.y0:
@@ -1072,6 +1072,9 @@ class EnergyModel:
                     gt = self.policy_cache[t][1]
                 
                 """
+
+                # decide every year 
+
                 if self.y == self.y0:
                     pol_input = [np.log10(self.c[t][self.y-self.y0]),
                                     np.log10(self.z[t][self.y-self.y0])/10,
@@ -1093,9 +1096,12 @@ class EnergyModel:
                 
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
-                gt = min(1.0, gt)
+                #gt = min(1.0, gt)
+                #gt = min(0.3, max(-0.3,gt))
+                gt = gt/2
                 
-                """
+                
+            
 
 
                 # try:
@@ -1127,7 +1133,7 @@ class EnergyModel:
 
                 qp = self.q[t][self.y-self.y0]
                 qf = qp * (1 + gt)
-                #qf = min(qp * (1 + gt), maxcap)
+                #qf = min(qp * (1 + gt), maxcap)  # if want to add generation cap for tech
                 self.q[t][self.y+1-self.y0] = max(0, qf)
 
         # 7 Calculate the quantities of fossil fuel energy carriers

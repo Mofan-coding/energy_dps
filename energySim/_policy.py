@@ -19,6 +19,7 @@ class DeterministicActor(torch.nn.Module):
                 torch.nn.Linear(state_dim, hidden_size),
                 torch.nn.Tanh(),
                 torch.nn.Linear(hidden_size, action_dim),
+                torch.nn.Sigmoid()  #map the output in [0,1]
                 # decide if you want to append
                 # another activation function
                 # to map the output in a specific range
