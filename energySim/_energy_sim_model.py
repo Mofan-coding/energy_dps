@@ -44,7 +44,7 @@ class EnergyModel:
         # year counter
         self.y = self.y0
 
-        #self.policy_cache = {}  #cache gt of each tech of last decision year
+        self.policy_cache = {}  #cache gt of each tech of last decision year
 
         # initialize demand dict, 
         # each key is a sector and the item is an array
@@ -1041,7 +1041,7 @@ class EnergyModel:
                 # 5) time
 
                 # decide every 5 year 
-                """
+                
                
                 if t not in self.policy_cache or (self.y - self.y0) % 5 == 0:
                     if self.y == self.y0:
@@ -1094,7 +1094,8 @@ class EnergyModel:
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 gt = min(1.0, gt)
-               
+                
+                """
 
 
                 # try:
