@@ -1079,7 +1079,7 @@ class EnergyModel:
                     pol_input = [np.log10(self.c[t][self.y-self.y0]),
                                     np.log10(self.z[t][self.y-self.y0])/10,
                                     (self.y-self.y0)/(self.yend-self.y0),
-                                    10*(sum([self.q[self.technology[x]][self.y-self.y0] \
+                                    (sum([self.q[self.technology[x]][self.y-self.y0] \
                                             for x in self.carrierInputs[self.carrier.index('electricity')]])/\
                                                 self.elec[self.y-self.y0] - 1),
                                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
@@ -1088,17 +1088,19 @@ class EnergyModel:
                     pol_input = [np.log10(self.c[t][self.y-self.y0]),
                                     np.log10(self.z[t][self.y-self.y0])/10,
                                     (self.y-self.y0)/(self.yend-self.y0),
-                                    10*((sum([self.q[self.technology[x]][self.y-self.y0] \
+                                    ((sum([self.q[self.technology[x]][self.y-self.y0] \
                                             for x in self.carrierInputs[self.carrier.index('electricity')]])/\
                                                 self.elec[self.y-self.y0] - 1)),
                                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
                                     ]
+                    #print('policy inputs:', pol_input)
                 
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 #gt = min(1.0, gt)
                 #gt = min(0.3, max(-0.3,gt))
                 gt = gt/2
+                #print('gt:', gt)
                 
                 
             

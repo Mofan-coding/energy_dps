@@ -315,9 +315,9 @@ learningRateTechs = ['nuclear electricity',
 
 
 # uncomment to set common parameters for learning rate
-# for t in learningRateTechs:
-#     costparams['omega'][t] = 0.37
-#     costparams['sigmaOmega'][t] = 0.35
+for t in learningRateTechs:
+    costparams['omega'][t] = 0.37
+    costparams['sigmaOmega'][t] = 0.35
 
 # create labels different cost assumptions
 costsAssumptions = {}
