@@ -1,6 +1,4 @@
-[33m(raylet)[0m WARNING: 22 PYTHON worker processes have been started on node: 566202b500f7a7586df37fbd39e69211a445317fbefaee0bec02143b with address: 10.20.12.21. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
-Policy saved to results/081203_no transition_policy.pth
-[33m(raylet)[0m WARNING: 16 PYTHON worker processes have been started on node: 7a952f6ca75d6a4c406a750771483798c81ccc6caba40c26439a9e0b with address: 10.20.10.23. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
-Policy saved to results/081202_slow transition_policy.pth
-[33m(raylet)[0m WARNING: 16 PYTHON worker processes have been started on node: 315bd58af5dc3e644d59d95ca053fb703447737f08813e1bb32aec57 with address: 10.20.8.31. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
-Policy saved to results/081201_fast transition_policy.pth
+[33m(raylet)[0m WARNING: 20 PYTHON worker processes have been started on node: a255bfb87fb0442da8e2bb4a3d5e0cea2e3a78a8df8913d4b5b23a2c with address: 10.20.6.24. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
+Policy saved to results/081301_fast transition_policy.pth
+[33m(raylet)[0m WARNING: 16 PYTHON worker processes have been started on node: 5433024251ef78cb40f2e19a30e8b75901b548596392fc0314fd9c55 with address: 10.20.8.28. This could be a result of using a large number of actors, or due to tasks blocked in ray.get() calls (see https://github.com/ray-project/ray/issues/3644 for some discussion of workarounds).
+Policy saved to results/081302_slow transition_policy.pth
