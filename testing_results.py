@@ -25,13 +25,13 @@ simulate = True
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
 
-nsim =1
-label = '081201'
+nsim =100
+label = '081301'
 sim_scenario = 'fast transition'
 
 
 savegif = False# individual simulation dynamics 
-savebox= False # boxplot of costs 
+savebox= True # boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
