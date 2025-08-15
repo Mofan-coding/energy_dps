@@ -9,13 +9,20 @@ import os
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '081401'
+label = '081501'
 scenario = 'fast transition'
+gt_clip = 0.3
+hidden_size = 16
+input_norm = False
+
 
 model = _energy_sim_model.EnergyModel(
     EFgp=_energy_sim_params.scenarios[scenario][0],
     slack=_energy_sim_params.scenarios[scenario][1],
     costparams=_energy_sim_params.costsAssumptions['Way et al. (2022)'],
+    gt_clip=gt_clip,
+    hidden_size=hidden_size,
+    input_norm=input_norm
 )
 
 model.mode = 'policy'

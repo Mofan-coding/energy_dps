@@ -9,17 +9,24 @@ import os
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '081402'
-scenario = 'slow transition'
+label = '081502'
+scenario = 'fast transition'
+gt_clip = 0.3
+hidden_size = 16
+input_norm = True
 
 model = _energy_sim_model.EnergyModel(
     EFgp=_energy_sim_params.scenarios[scenario][0],
     slack=_energy_sim_params.scenarios[scenario][1],
     costparams=_energy_sim_params.costsAssumptions['Way et al. (2022)'],
+    gt_clip=gt_clip,
+    hidden_size=hidden_size,
+    input_norm=input_norm
+
 )
 
 model.mode = 'policy'
-model.policy.train(label, iter=1500, batch_size=100, popsize=16, dist=True) #pop size不大于 cpus-per-task
+model.policy.train(label, iter=1000, batch_size=100, popsize=16, dist=True) #pop size不大于 cpus-per-task
 #model.policy.train(label, iter = 2, batch_size = 2,popsize = 2, dist = True)
 os.makedirs('results', exist_ok=True)
 policy_path = f'results/{label}_{scenario}_policy.pth'

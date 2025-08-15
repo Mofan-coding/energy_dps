@@ -26,12 +26,16 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '081301'
+label = '081201'
 sim_scenario = 'fast transition'
 
+gt_clip = 0.3
+hidden_size = 16
+input_norm = False
 
-savegif = False# individual simulation dynamics 
-savebox= True # boxplot of costs 
+
+savegif = True #individual simulation dynamics 
+savebox= False # boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
@@ -76,7 +80,10 @@ if simulate:
         model = _energy_sim_model.EnergyModel(\
                     EFgp = _energy_sim_params.scenarios[scenario][0],
                     slack = _energy_sim_params.scenarios[scenario][1],
-                    costparams = _energy_sim_params.costsAssumptions['Way et al. (2022)'],)
+                    costparams = _energy_sim_params.costsAssumptions['Way et al. (2022)'],
+                    gt_clip=gt_clip,
+                    hidden_size=hidden_size,
+                    input_norm=input_norm)
 
         ######## simulate model
 
@@ -135,6 +142,8 @@ if simulate:
                     shares_df = model.get_generation_shares()
                     #print(shares_df)
                     all_shares.append(shares_df)
+                
+        
         
         if scenario == sim_scenario :
 

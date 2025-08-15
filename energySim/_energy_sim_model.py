@@ -10,10 +10,16 @@ import math
 class EnergyModel:
 
     # initialize the model with data
-    def __init__(self, EFgp, slack, costparams, mode="exogenous"):
+    def __init__(self, EFgp, slack, costparams, mode="exogenous",
+                 gt_clip = 0.3, hidden_size = 16, input_norm = False):
 
         # growth rates of technologies
         self.EFgp = EFgp
+
+        # max growth rate
+        self.gt_clip = gt_clip
+        #whether normalize policy inputs
+        self.input_norm = input_norm
         
         # initialize technologies, carriers, and sectors
         self.technology = ['oil (direct use)','coal (direct use)',
@@ -245,7 +251,7 @@ class EnergyModel:
                                   action_dim=1,
                                   env=self, 
                                   iter=100,
-                                  hidden_size=16)
+                                  hidden_size= hidden_size)
 
     def sample_uncertainties(self):
 
@@ -1079,7 +1085,7 @@ class EnergyModel:
                     pol_input = [np.log10(self.c[t][self.y-self.y0]),
                                     np.log10(self.z[t][self.y-self.y0])/10,
                                     (self.y-self.y0)/(self.yend-self.y0),
-                                    5*(sum([self.q[self.technology[x]][self.y-self.y0] \
+                                    10*(sum([self.q[self.technology[x]][self.y-self.y0] \
                                             for x in self.carrierInputs[self.carrier.index('electricity')]])/\
                                                 self.elec[self.y-self.y0] - 1),
                                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
@@ -1088,18 +1094,25 @@ class EnergyModel:
                     pol_input = [np.log10(self.c[t][self.y-self.y0]),
                                     np.log10(self.z[t][self.y-self.y0])/10,
                                     (self.y-self.y0)/(self.yend-self.y0),
-                                    5*((sum([self.q[self.technology[x]][self.y-self.y0] \
+                                    10*((sum([self.q[self.technology[x]][self.y-self.y0] \
                                             for x in self.carrierInputs[self.carrier.index('electricity')]])/\
                                                 self.elec[self.y-self.y0] - 1)),
                                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
                                     ]
                     #print('policy inputs:', pol_input)
                 
+                #归一化
+                if self.input_norm:
+                    means = np.array([1.0, 0.3, 0.5, 1.2, 0.2])      # 保留一位小数
+                    stds  = np.array([0.3, 0.1, 0.3, 0.6, 0.2])      # 保留一位小数
+                    pol_input = ((np.array(pol_input) - means) / (stds + 1e-8)).tolist()
+                
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 #gt = min(1.0, gt)
-                #gt = min(0.3, max(-0.3,gt))
-                gt = gt/2
+                maxcap = self.gt_clip
+                gt = min(maxcap, max(-maxcap,gt))  # clip gt
+                #gt = gt/2
                 #print('gt:', gt)
                 
                 
