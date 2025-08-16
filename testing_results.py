@@ -34,8 +34,8 @@ hidden_size = 16
 input_norm = False
 
 
-savegif = True #individual simulation dynamics 
-savebox= False # boxplot of costs 
+savegif = False #individual simulation dynamics 
+savebox= True # boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
@@ -142,6 +142,9 @@ if simulate:
                     shares_df = model.get_generation_shares()
                     #print(shares_df)
                     all_shares.append(shares_df)
+        
+    
+
                 
         
         

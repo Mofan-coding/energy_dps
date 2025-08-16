@@ -1099,14 +1099,22 @@ class EnergyModel:
                                                 self.elec[self.y-self.y0] - 1)),
                                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
                                     ]
-                    #print('policy inputs:', pol_input)
+                
                 
                 #归一化
                 if self.input_norm:
-                    means = np.array([1.0, 0.3, 0.5, 1.2, 0.2])      # 保留一位小数
-                    stds  = np.array([0.3, 0.1, 0.3, 0.6, 0.2])      # 保留一位小数
-                    pol_input = ((np.array(pol_input) - means) / (stds + 1e-8)).tolist()
+                    # 只对第1维和第4维做z-score，其他保持原比例
+                    means = np.array([1.06, 0.0, 0.0, 1.09, 0.0])
+                    stds  = np.array([0.38, 1.0, 1.0, 0.71, 1.0])
+                    
+                    arr = np.array(pol_input)
+                    arr[0] = (arr[0] - means[0]) / stds[0]
+                    arr[3] = (arr[3] - means[3]) / stds[3]
+                    pol_input = arr.tolist()
+                    
                 
+                #print('policy inputs:', pol_input)
+
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 #gt = min(1.0, gt)
