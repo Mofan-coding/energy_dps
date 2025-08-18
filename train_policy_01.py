@@ -9,7 +9,7 @@ import os
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '081601'
+label = '081701'
 scenario = 'fast transition'
 gt_clip = 0.3
 hidden_size = 16

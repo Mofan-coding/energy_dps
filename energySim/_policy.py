@@ -141,8 +141,8 @@ class SNES:
         self.sigma = torch.ones(sum([torch.numel(l) for l in self.actor.parameters()]))
 
         # set default learning rates
-        self.mu_lr = 1.0
-        self.sigma_lr = 0.2 * (3 + np.log(self.mu.shape[0])) / np.sqrt(self.mu.shape[0])
+        self.mu_lr = 1.0 * 0.5
+        self.sigma_lr = 0.5* (0.2 * (3 + np.log(self.mu.shape[0])) / np.sqrt(self.mu.shape[0]))
 
 
     def get_action(self, state):

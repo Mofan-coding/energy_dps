@@ -1118,9 +1118,10 @@ class EnergyModel:
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 #gt = min(1.0, gt)
-                maxcap = self.gt_clip
-                gt = min(maxcap, max(-maxcap,gt))  # clip gt
-                #gt = gt/2
+                gt_max = self.gt_clip
+                #gt = min(gt_max, max(gt_max,gt))  # clip gt
+                gt = gt_max * gt
+                #print(t,gt)
                 #print('gt:', gt)
                 
                 
