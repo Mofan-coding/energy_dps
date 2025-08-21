@@ -19,7 +19,8 @@ class DeterministicActor(torch.nn.Module):
                 torch.nn.Linear(state_dim, hidden_size),
                 torch.nn.Tanh(),
                 torch.nn.Linear(hidden_size, action_dim),
-                torch.nn.Sigmoid()  #map the output in [0,1]
+                #torch.nn.Sigmoid()  #map the output in [0,1]
+
                 # decide if you want to append
                 # another activation function
                 # to map the output in a specific range
@@ -177,9 +178,11 @@ class SNES:
         
         # create actors if distributed
         if self.dist:
-            ray.init(num_cpus=4)
-            self.simulators = [Simulator.remote(self.env) \
+            ray.init(num_cpus=self.popsize)
+            self.simulators = [Simulator.remote(self.env.copy()) \
                                for _ in range(self.popsize)]
+            #self.simulators = [Simulator.remote(self.env) \
+                            #for _ in range(self.popsize)]
 
         objs = np.empty(self.iter)
         for i in range(self.iter):
@@ -218,7 +221,7 @@ class SNES:
         noise = torch.randn(self.popsize, *self.mu.shape)
         #self.mu 是所有参数拉平后的一维均值向量
 
-        sampled_pop = self.mu + self.sigma * noise 
+        sampled_pop = self.mu + self.sigma * noise  # sample popsize policy parmas, from N(mu, sigma^2)
 
         if self.dist == False:
             objs = np.empty(self.popsize)

@@ -1117,12 +1117,15 @@ class EnergyModel:
 
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
-                #gt = min(1.0, gt)
-                gt_max = self.gt_clip
+                gt = min(1.0, gt)
+             
+                #gt_max = self.gt_clip
                 #gt = min(gt_max, max(gt_max,gt))  # clip gt
-                gt = gt_max * gt
+                #gt = gt_max * gt
                 #print(t,gt)
                 #print('gt:', gt)
+                #if t == 'solar pv electricity':
+                    #print(self.y, gt)
                 
                 
             
@@ -1143,6 +1146,8 @@ class EnergyModel:
                 # --- add cap logic as in exogenous --
 
                 # get growth rate parameters
+
+                """
                 try:
                     gt0, gT, t1, t2, t3, psi = self.EFgp[t,'electricity']
                 # if growth parameters not available, 
@@ -1154,6 +1159,8 @@ class EnergyModel:
                     maxcap = psi * self.elec[self.y+1-self.y0]
                 else:
                     maxcap = self.elec[self.y+1-self.y0]
+                
+                """
 
                 qp = self.q[t][self.y-self.y0]
                 qf = qp * (1 + gt)
