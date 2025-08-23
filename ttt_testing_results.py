@@ -31,11 +31,11 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '080103'
+label = '082102'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
-hidden_size = 1
+hidden_size = 4
 input_norm = False
 
 

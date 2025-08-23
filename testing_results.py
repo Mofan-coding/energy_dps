@@ -25,17 +25,17 @@ simulate = True
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
 
-nsim =100
-label = '080103'
+nsim =1
+label = '082101'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
-hidden_size = 1
+hidden_size = 2
 input_norm = False
 
 
-savegif = False #individual simulation dynamics 
-savebox= True# boxplot of costs 
+savegif = True #individual simulation dynamics 
+savebox= False# boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
@@ -133,8 +133,8 @@ if simulate:
                 if scenario == sim_scenario  and savegif:
                     print("saving the figure...")
                     #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
-                    model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                    model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
                     
                     #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
@@ -262,11 +262,11 @@ if savebox:
                           
                                     'Fast Transition'],
                         width=0.5, 
-                        whis=(5,95),
+                        whis=(0,100),  # whis显示5% - 95% whis = (5,95)， all range (0,100)
                         linewidth=1.75,
                         palette='colorblind', 
                         gap = 0.2,
-                        **{'showfliers':False})
+                        **{'showfliers':True}) # 不显示极端值
 
     ax.set_xlabel('')
 
@@ -316,7 +316,7 @@ if savebox:
 
     save_dir = f"./results/figures/{label}"
     os.makedirs(save_dir, exist_ok=True)
-    fig.savefig(f"{save_dir}/total_discounted_costs.pdf")   
+    fig.savefig(f"{save_dir}/show_outlier_total_discounted_costs.pdf")   
 
     #fig.savefig(f"./results/figures/total_discounted_costs.pdf")
 

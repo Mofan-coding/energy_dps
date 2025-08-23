@@ -6,21 +6,6 @@ import energySim._policy as Policy
 import matplotlib.animation as animation
 import math
 
-
-
-
-
-##### test 
-# 0821 01energy_sim_model
-
-# repeat step 4 after step9
-# recompute p2x based on actual wind and solar production--> let p2x cost constrain solar and wind production!
-
-
-
-## later
-# elec slack technology in the end (because both exo and policy need it! )
-
 # model class
 class EnergyModel:
 
@@ -1041,7 +1026,6 @@ class EnergyModel:
                     #     pols_inputs.to_csv('pols_inputs.csv', index=False)
             
                 # compute electricity slack generation
-              
                 self.q[sl][self.y+1-self.y0] = \
                     max(0, self.elec[self.y+1-self.y0] - \
                         sum([self.q[t][self.y+1-self.y0] for t in \
@@ -1049,12 +1033,14 @@ class EnergyModel:
                                 self.carrierInputs\
                                     [self.carrier.index('electricity')]] \
                                         if t != sl]))
-              
 
         elif self.mode == 'policy':
+           
             for t in [self.technology[x] \
                     for x in self.carrierInputs\
                         [self.carrier.index('electricity')]]:
+       
+            
                 
                 # inputs for each technology"
                 # 1) unit cost of generation from technology
@@ -1135,6 +1121,8 @@ class EnergyModel:
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 gt = min(1.0, gt)
+            
+                
              
                 #gt_max = self.gt_clip
                 #gt = min(gt_max, max(gt_max,gt))  # clip gt
@@ -1273,61 +1261,6 @@ class EnergyModel:
                 psi/365 * (\
                     self.q['solar pv electricity'][self.y+1-self.y0] + \
                     self.q['wind electricity'][self.y+1-self.y0]))
-        
-
-       
-
-        # slack 
-        """
-        self.q[sl][self.y+1-self.y0] = \
-            max(0, self.elec[self.y+1-self.y0] - \
-                sum([self.q[t][self.y+1-self.y0] for t in \
-                    [self.technology[x] for x in \
-                        self.carrierInputs\
-                            [self.carrier.index('electricity')]] \
-                                if t != sl]))
-        """
-
-
-        # 0822 add step: recompute P2X based on actual solar and wind
-
-        # compute P2X fuel needs
-        gt0, gT, t1, t2, t3, psi = \
-                    self.EFgp['P2Xfuels','electricity']  
-        gt0 = 0
-        gT = 20
-        t1 = 13
-        t2 = t3
-        # compute growth rate
-        if self.y - self.y0 < t1:
-            gt = 0.01 * gt0
-        elif self.y - self.y0 >= t1 and self.y - self.y0 < t2:
-            s_ = 50 * np.abs(0.01*(gT-gt0)/(t2-t1))
-            gt = 0.01 * gt0 +\
-                0.01 * (gT - gt0) / \
-                    (1+np.exp(\
-                        -s_*(self.y - self.y0 - t1 - (t2-t1)/2)))
-        else:
-            gt = 0.01 * gT
-        # adjust P2X fuel production
-        self.piP2X[self.y+1-self.y0] = min(5*gt,1)
-
-        # compute P2X fuel production
-        solar_actual = self.q['solar pv electricity'][self.y+1-self.y0]
-        wind_actual = self.q['wind electricity'][self.y+1-self.y0]
-        vre_total = solar_actual + wind_actual
-
-        self.q['P2X'][self.y+1-self.y0] = \
-            sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
-                        for s in self.sector]) + \
-            2 * psi * \
-                vre_total * \
-                min(self.piP2X[self.y+1-self.y0], 1)
-         #P2X产量 = 各部门直接需求 + 为吸收VRE间歇性而额外生产的P2X燃料
-         #这样可以模拟“VRE越多，P2X需求越大
-
-
-
         
         # 10 Calculate the quantity 
         # of electrolyzers required for P2X fuel production
