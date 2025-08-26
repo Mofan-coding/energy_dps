@@ -31,11 +31,11 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '082102'
+label = '082201'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
-hidden_size = 4
+hidden_size = 2
 input_norm = False
 
 
@@ -130,6 +130,14 @@ if simulate:
         idx_min_exo = np.argmin(all_costs_exo)
         idx_max_exo = np.argmax(all_costs_exo)
 
+        """
+        p15 = np.percentile(all_costs_exo, 15)
+        p85 = np.percentile(all_costs_exo, 85)
+        idx_min_exo = np.argmin(np.abs(np.array(all_costs_exo) - p15))
+        idx_max_exo = np.argmin(np.abs(np.array(all_costs_exo) - p85))
+        """
+
+
 
         # --- Policy mode ---
 
@@ -174,8 +182,13 @@ if simulate:
                     #print(shares_df)
                     all_shares.append(shares_df)
         
-        idx_min_policy = np.argmin(all_costs_policy)
-        idx_max_policy = np.argmax(all_costs_policy)
+        #idx_min_policy = np.argmin(all_costs_policy)
+        #idx_max_policy = np.argmax(all_costs_policy)
+        p15 = np.percentile(all_costs_policy, 15)
+        p85 = np.percentile(all_costs_policy, 85)
+
+        idx_min_policy = np.argmin(np.abs(np.array(all_costs_policy) - p15))
+        idx_max_policy = np.argmin(np.abs(np.array(all_costs_policy) - p85))        
 
 
         def plot_final_energy_by_source(q_dict, label, title, name=None):
@@ -252,25 +265,58 @@ if simulate:
             else:
                 plt.show()
         
+        def plot_q_vs_time(q_dict, label, title, name=None):
+            years = range(model.y0, model.yend + 1) # 根据你的模型年份范围调整
+            techs = [k for k in q_dict.keys() if isinstance(q_dict[k], (list, np.ndarray))]
+            n_techs = len(techs)
+            ncols = 4
+            nrows = int(np.ceil(n_techs / ncols))
+            fig, axes = plt.subplots(nrows, ncols, figsize=(4*ncols, 3*nrows), sharex=True)
+            axes = axes.flatten()
+            for i, tech in enumerate(techs):
+                axes[i].plot(years, q_dict[tech], label=tech)
+                axes[i].set_title(tech)
+                axes[i].set_xlabel('Year')
+                axes[i].set_ylabel('q')
+                axes[i].legend()
+            # 去掉多余的空白子图
+            for j in range(i+1, len(axes)):
+                fig.delaxes(axes[j])
+            fig.suptitle(title)
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+            if name:
+                save_dir = f'results/figures/{label}'
+                os.makedirs(save_dir, exist_ok=True)
+                fig.savefig(f'{save_dir}/{name}.png', dpi=300, bbox_inches='tight')
+                plt.close(fig)
+            else:
+                plt.show()
+        
             
         # --- 画最低和最高 cost 的轨迹并保存 ---
         plot_final_energy_by_source(all_q_exo[idx_min_exo], label, "Exogenous: Final Energy (Lowest Cost)", name="exo_lowest_final_energy")
         #plot_solar_cost(all_c_exo[idx_min_exo], label, "Exogenous: Solar PV Cost (Lowest Cost)", name="exo_lowest_solar_cost")
-        plot_all_tech_costs(all_c_policy[idx_min_exo], label, "Exogenous: All Tech Costs (Lowest Cost)", name="exo_lowest_all_tech_costs")
+        plot_all_tech_costs(all_c_exo[idx_min_exo], label, "Exogenous: All Tech Costs (Lowest Cost)", name="exo_lowest_all_tech_costs")
+        plot_q_vs_time(all_q_exo[idx_min_exo], label, "Exogenous: q vs Time (Lowest Cost)", name="exo_lowest_q_vs_time")
 
         plot_final_energy_by_source(all_q_exo[idx_max_exo], label, "Exogenous: Final Energy (Highest Cost)", name="exo_highest_final_energy")
         #plot_solar_cost(all_c_exo[idx_max_exo], label, "Exogenous: Solar PV Cost (Highest Cost)", name="exo_highest_solar_cost")
-        plot_all_tech_costs(all_c_policy[idx_max_exo], label, "Exogenous: All Tech Costs (Highest Cost)", name="exo_highest_all_tech_costs")
-        
+        plot_all_tech_costs(all_c_exo[idx_max_exo], label, "Exogenous: All Tech Costs (Highest Cost)", name="exo_highest_all_tech_costs")
+        plot_q_vs_time(all_q_exo[idx_max_exo], label, "Exogenous: q vs Time (Highest Cost)", name="exo_Highest_q_vs_time")
+
+        #### ------ Policy
+
+        """
         plot_final_energy_by_source(all_q_policy[idx_min_policy], label, "Policy: Final Energy (Lowest Cost)", name="policy_lowest_final_energy")
         #plot_solar_cost(all_c_policy[idx_min_policy], label, "Policy: Solar PV Cost (Lowest Cost)", name="policy_lowest_solar_cost")
         plot_all_tech_costs(all_c_policy[idx_min_policy], label, "Policy: All Tech Costs (Lowest Cost)", name="policy_lowest_all_tech_costs")
-        
+        plot_q_vs_time(all_q_policy[idx_min_policy], label, "Policy: q vs Time (Lowest Cost)", name="policy_lowest_q_vs_time")
+
         plot_final_energy_by_source(all_q_policy[idx_max_policy], label, "Policy: Final Energy (Highest Cost)", name="policy_highest_final_energy")
         #plot_solar_cost(all_c_policy[idx_max_policy], label, "Policy: Solar PV Cost (Highest Cost)", name="policy_highest_solar_cost")
         plot_all_tech_costs(all_c_policy[idx_max_policy], label, "Policy: All Tech Costs (Highest Cost)", name="policy_highest_all_tech_costs")
-        
-                        
+        plot_q_vs_time(all_q_policy[idx_max_policy], label, "Policy: q vs Time (Highest Cost)", name="policy_highest_q_vs_time")
+        """         
         
         
         if scenario == sim_scenario :

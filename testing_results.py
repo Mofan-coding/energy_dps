@@ -25,8 +25,8 @@ simulate = True
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
 
-nsim =1
-label = '082101'
+nsim =100
+label = '082201'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -34,8 +34,8 @@ hidden_size = 2
 input_norm = False
 
 
-savegif = True #individual simulation dynamics 
-savebox= False# boxplot of costs 
+savegif = False #individual simulation dynamics 
+savebox= True # boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
@@ -262,11 +262,11 @@ if savebox:
                           
                                     'Fast Transition'],
                         width=0.5, 
-                        whis=(0,100),  # whis显示5% - 95% whis = (5,95)， all range (0,100)
+                        whis=(5,95),  # whis显示5% - 95% whis = (5,95)， all range (0,100)
                         linewidth=1.75,
                         palette='colorblind', 
                         gap = 0.2,
-                        **{'showfliers':True}) # 不显示极端值
+                        **{'showfliers':False}) # false: 不显示极端值
 
     ax.set_xlabel('')
 
