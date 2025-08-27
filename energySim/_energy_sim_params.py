@@ -274,8 +274,8 @@ costparams['sigmaOmega']['multi-day storage'] = 0.041
 costparams['sigma']['multi-day storage'] = 0.065
 costparams['omega']['electrolyzers'] = 0.129
 costparams['sigmaOmega']['electrolyzers'] = 0.067
-#costparams['sigma']['electrolyzers'] = 0.201
-costparams['sigma']['electrolyzers'] = 0.1
+costparams['sigma']['electrolyzers'] = 0.201
+#costparams['sigma']['electrolyzers'] = 0.1
 
 # set breakpoint params (in this case no breakpoints)
 # breakpoints: [lognormal shape, lognormal scale, lognormal location]

@@ -17,8 +17,8 @@ import math
 # recompute p2x based on actual wind and solar production--> let p2x cost constrain solar and wind production!
 
 
+# 0826
 
-## later
 # elec slack technology in the end (because both exo and policy need it! )
 
 # model class
@@ -1041,6 +1041,8 @@ class EnergyModel:
                     #     pols_inputs.to_csv('pols_inputs.csv', index=False)
             
                 # compute electricity slack generation
+
+                """
               
                 self.q[sl][self.y+1-self.y0] = \
                     max(0, self.elec[self.y+1-self.y0] - \
@@ -1049,6 +1051,7 @@ class EnergyModel:
                                 self.carrierInputs\
                                     [self.carrier.index('electricity')]] \
                                         if t != sl]))
+                """
               
 
         elif self.mode == 'policy':
@@ -1278,7 +1281,7 @@ class EnergyModel:
        
 
         # slack 
-        """
+   
         self.q[sl][self.y+1-self.y0] = \
             max(0, self.elec[self.y+1-self.y0] - \
                 sum([self.q[t][self.y+1-self.y0] for t in \
@@ -1286,7 +1289,7 @@ class EnergyModel:
                         self.carrierInputs\
                             [self.carrier.index('electricity')]] \
                                 if t != sl]))
-        """
+       
 
 
         # 0822 add step: recompute P2X based on actual solar and wind

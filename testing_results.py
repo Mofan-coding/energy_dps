@@ -262,11 +262,11 @@ if savebox:
                           
                                     'Fast Transition'],
                         width=0.5, 
-                        whis=(5,95),  # whis显示5% - 95% whis = (5,95)， all range (0,100)
+                        whis=(0,100),  # whis显示5% - 95% whis = (5,95)， all range (0,100)
                         linewidth=1.75,
                         palette='colorblind', 
                         gap = 0.2,
-                        **{'showfliers':False}) # false: 不显示极端值
+                        **{'showfliers':True}) # false: 不显示极端值
 
     ax.set_xlabel('')
 
