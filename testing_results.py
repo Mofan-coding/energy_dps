@@ -34,8 +34,8 @@ hidden_size = 2
 input_norm = False
 
 
-savegif = False #individual simulation dynamics 
-savebox= True # boxplot of costs 
+savegif = True #individual simulation dynamics 
+savebox= False # boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
@@ -77,6 +77,7 @@ if simulate:
 
         # pass input data to model
         print("building the model...")
+        print('scenario:', scenario)
         model = _energy_sim_model.EnergyModel(\
                     EFgp = _energy_sim_params.scenarios[scenario][0],
                     slack = _energy_sim_params.scenarios[scenario][1],
@@ -89,30 +90,33 @@ if simulate:
 
 
         # set simulation mode
+    
         model.mode = 'exogenous'
         np.random.seed(0)
         
-        
+        print('start:', model.mode)
         for n in range(nsim):
             # for each cost assumption, compute total costs
             # and append it to the dictionary
             # 1e-12 is used to convert from USD to trillion USD
             for l in labels:
-                print("simulating...")
-                tcosts[l][scenario].append( 1e-12 * model.simulate())
-                if scenario == sim_scenario and savegif:
-                    print("saving the figure...")
-                    #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
-                    
-                    #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotFinalEnergy(label,filename=f'{n}_static_{scenario.replace(" ", "_")}_{n}')
-                    
-                    #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
-               
-
-
+                if scenario == sim_scenario:
+                
+                    print("simulating...",n)
+                    tcosts[l][scenario].append( 1e-12 * model.simulate())
+                    if scenario == sim_scenario and savegif:
+                        print("saving the figure...")
+                        #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
+                        
+                        #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
+                        #model.plotFinalEnergy(label,filename=f'{n}_static_{scenario.replace(" ", "_")}_{n}')
+                        
+                        #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+                        #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+                        #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+        
+        
+        """
         # set policy mode
         model.mode = 'policy'
 
@@ -128,22 +132,24 @@ if simulate:
             # and append it to the dictionary
             # 1e-12 is used to convert from USD to trillion USD
             for l in labels:
-                print("simulating...")
-                tcosts[l+' - decision rule'][scenario].append( 1e-12 * model.simulate())
-                if scenario == sim_scenario  and savegif:
-                    print("saving the figure...")
-                    #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
-                    
-                    #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                    #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                    shares_df = model.get_generation_shares()
-                    #print(shares_df)
-                    all_shares.append(shares_df)
+                if scenario == sim_scenario:
+                
+                    print("simulating...",n)
+                    tcosts[l+' - decision rule'][scenario].append( 1e-12 * model.simulate())
+                    if scenario == sim_scenario  and savegif:
+                        print("saving the figure...")
+                        #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
+                        #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                        #model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
+                        
+                        #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                        #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                        #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                        shares_df = model.get_generation_shares()
+                        #print(shares_df)
+                        all_shares.append(shares_df)
         
-    
+        """
 
                 
         
@@ -262,11 +268,11 @@ if savebox:
                           
                                     'Fast Transition'],
                         width=0.5, 
-                        whis=(0,100),  # whis显示5% - 95% whis = (5,95)， all range (0,100)
+                        whis=(5,95),  # whis显示5% - 95% whis = (5,95)， all range (0,100)
                         linewidth=1.75,
                         palette='colorblind', 
                         gap = 0.2,
-                        **{'showfliers':True}) # false: 不显示极端值
+                        **{'showfliers':False}) # false: 不显示极端值
 
     ax.set_xlabel('')
 
@@ -316,7 +322,7 @@ if savebox:
 
     save_dir = f"./results/figures/{label}"
     os.makedirs(save_dir, exist_ok=True)
-    fig.savefig(f"{save_dir}/show_outlier_total_discounted_costs.pdf")   
+    fig.savefig(f"{save_dir}/no_outlier_total_discounted_costs.pdf")   
 
     #fig.savefig(f"./results/figures/total_discounted_costs.pdf")
 

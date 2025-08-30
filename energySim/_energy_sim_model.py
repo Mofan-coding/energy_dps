@@ -19,7 +19,10 @@ import math
 
 # 0826
 
-# elec slack technology in the end (because both exo and policy need it! )
+# elec slack technology in the end (because both exo and policy need it! ) not good, no use any more
+
+# 0830
+# add electorlyzer unit cost as a tech input
 
 # model class
 class EnergyModel:
@@ -262,7 +265,7 @@ class EnergyModel:
         self.mode = mode
 
         # define policy
-        self.policy = Policy.SNES(state_dim=5, 
+        self.policy = Policy.SNES(state_dim=6, 
                                   action_dim=1,
                                   env=self, 
                                   iter=100,
@@ -959,6 +962,16 @@ class EnergyModel:
                     self.EFgp['wind electricity','electricity'][-1]) * \
                 self.elec[self.y+1-self.y0] * \
                 min(self.piP2X[self.y+1-self.y0], 1)
+        
+        # if self.y == 2099:
+        #     print(self.y)
+        #     print('STEP4:P2x sector:',  sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
+        #                 for s in self.sector]))
+        #     print('STEP4:P2x renewable:',2 * psi * \
+        #         (self.EFgp['solar pv electricity','electricity'][-1] + \
+        #             self.EFgp['wind electricity','electricity'][-1]) * \
+        #         self.elec[self.y+1-self.y0] * \
+        #         min(self.piP2X[self.y+1-self.y0], 1) )
          #P2X产量 = 各部门直接需求 + 为吸收VRE间歇性而额外生产的P2X燃料
          #这样可以模拟“VRE越多，P2X需求越大
 
@@ -1042,7 +1055,6 @@ class EnergyModel:
             
                 # compute electricity slack generation
 
-                """
               
                 self.q[sl][self.y+1-self.y0] = \
                     max(0, self.elec[self.y+1-self.y0] - \
@@ -1051,7 +1063,7 @@ class EnergyModel:
                                 self.carrierInputs\
                                     [self.carrier.index('electricity')]] \
                                         if t != sl]))
-                """
+                
               
 
         elif self.mode == 'policy':
@@ -1109,6 +1121,7 @@ class EnergyModel:
                                             for x in self.carrierInputs[self.carrier.index('electricity')]])/\
                                                 self.elec[self.y-self.y0] - 1),
                                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                    np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
                                     ]
                 else:
                     pol_input = [np.log10(self.c[t][self.y-self.y0]),
@@ -1118,6 +1131,7 @@ class EnergyModel:
                                             for x in self.carrierInputs[self.carrier.index('electricity')]])/\
                                                 self.elec[self.y-self.y0] - 1)),
                                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                    np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
                                     ]
                 
                 
@@ -1281,6 +1295,8 @@ class EnergyModel:
        
 
         # slack 
+
+        """
    
         self.q[sl][self.y+1-self.y0] = \
             max(0, self.elec[self.y+1-self.y0] - \
@@ -1289,7 +1305,7 @@ class EnergyModel:
                         self.carrierInputs\
                             [self.carrier.index('electricity')]] \
                                 if t != sl]))
-       
+        """
 
 
         # 0822 add step: recompute P2X based on actual solar and wind
@@ -1328,6 +1344,14 @@ class EnergyModel:
                 min(self.piP2X[self.y+1-self.y0], 1)
          #P2X产量 = 各部门直接需求 + 为吸收VRE间歇性而额外生产的P2X燃料
          #这样可以模拟“VRE越多，P2X需求越大
+
+        # if self.y == 2050:
+        #     print(self.y)
+        #     print('STEP9:P2x sector:',  sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
+        #                 for s in self.sector]))
+        #     print('STEP9:P2x reneable:',  2 * psi * \
+        #         vre_total * \
+        #         min(self.piP2X[self.y+1-self.y0], 1) )
 
 
 
