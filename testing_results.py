@@ -26,7 +26,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '082201'
+label = '083001'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -34,8 +34,8 @@ hidden_size = 2
 input_norm = False
 
 
-savegif = True #individual simulation dynamics 
-savebox= False # boxplot of costs 
+savegif = False #individual simulation dynamics 
+savebox= True # boxplot of costs 
 save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
@@ -100,23 +100,23 @@ if simulate:
             # and append it to the dictionary
             # 1e-12 is used to convert from USD to trillion USD
             for l in labels:
-                if scenario == sim_scenario:
+                #if scenario == sim_scenario:
                 
-                    print("simulating...",n)
-                    tcosts[l][scenario].append( 1e-12 * model.simulate())
-                    if scenario == sim_scenario and savegif:
-                        print("saving the figure...")
-                        #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
-                        
-                        #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
-                        #model.plotFinalEnergy(label,filename=f'{n}_static_{scenario.replace(" ", "_")}_{n}')
-                        
-                        #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
-                        #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
-                        #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+                #print("simulating...",n)
+                tcosts[l][scenario].append( 1e-12 * model.simulate())
+                if scenario == sim_scenario and savegif:
+                    print("saving the figure...")
+                    #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
+                    
+                    #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergy(label,filename=f'{n}_static_{scenario.replace(" ", "_")}_{n}')
+                    
+                    #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+    
         
-        
-        """
+      
         # set policy mode
         model.mode = 'policy'
 
@@ -132,24 +132,24 @@ if simulate:
             # and append it to the dictionary
             # 1e-12 is used to convert from USD to trillion USD
             for l in labels:
-                if scenario == sim_scenario:
+                #if scenario == sim_scenario:
                 
-                    print("simulating...",n)
-                    tcosts[l+' - decision rule'][scenario].append( 1e-12 * model.simulate())
-                    if scenario == sim_scenario  and savegif:
-                        print("saving the figure...")
-                        #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
-                        #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                        #model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
-                        
-                        #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                        #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                        #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                        shares_df = model.get_generation_shares()
-                        #print(shares_df)
-                        all_shares.append(shares_df)
-        
-        """
+                #print("simulating...",n)
+                tcosts[l+' - decision rule'][scenario].append( 1e-12 * model.simulate())
+                if scenario == sim_scenario  and savegif:
+                    print("saving the figure...")
+                    #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
+                    
+                    #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+                    shares_df = model.get_generation_shares()
+                    #print(shares_df)
+                    all_shares.append(shares_df)
+    
+     
 
                 
         

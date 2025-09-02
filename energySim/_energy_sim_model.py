@@ -838,6 +838,7 @@ class EnergyModel:
                             self.totalCost[y-self.y0]
 
         self.discountedCost = np.sum(self.discountedCost)
+        
         return self.discountedCost
 
 

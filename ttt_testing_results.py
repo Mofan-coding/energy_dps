@@ -31,7 +31,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '082201'
+label = '083001'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -39,8 +39,6 @@ hidden_size = 2
 input_norm = False
 
 savegif = True #individual simulation dynamics 
-
-
 
 
 # create labels for different cost assumptions
@@ -89,6 +87,11 @@ if simulate:
     # set simulation mode
     model.mode = 'exogenous'
     print('start:',model.mode)
+
+
+
+
+
     np.random.seed(0)
 
     all_costs_exo = [] #total system cost
@@ -102,7 +105,7 @@ if simulate:
         # and append it to the dictionary
         # 1e-12 is used to convert from USD to trillion USD
         for l in labels:
-            print("simulating...",n)
+            #print("simulating...",n)
             cost = 1e-12 * model.simulate()
             tcosts[l][scenario].append(cost)
             all_costs_exo.append(cost)
@@ -112,41 +115,41 @@ if simulate:
 
 
 
-            #tcosts[l][scenario].append( 1e-12 * model.simulate())
-            if scenario == sim_scenario and savegif:
-                print("saving the figure...")
-                #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
+            # tcosts[l][scenario].append( 1e-12 * model.simulate())
+            # if scenario == sim_scenario and savegif:
+            #     print("saving the figure...")
+            #     model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
                 
-                #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
-                #model.plotFinalEnergy(label,filename=f'{n}_static_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotFinalEnergy(label,filename=f'{n}_static_{scenario.replace(" ", "_")}_{n}')
                 
-                #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
-                #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
-                #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
             
     # 找最低和最高cost索引
-    # idx_min_exo = np.argmin(all_costs_exo)
-    # idx_max_exo = np.argmax(all_costs_exo)
+    idx_min_exo = np.argmin(all_costs_exo)
+    idx_max_exo = np.argmax(all_costs_exo)
 
     # # 找对应的learning rate参数
     #omega_min_exo = all_omega_exo[idx_min_exo]
     #omega_max_exo = all_omega_exo[idx_max_exo]
 
 
-    """
-    # 找85 和15 percentile cost 索引
-    p15 = np.percentile(all_costs_exo, 15)
-    p85 = np.percentile(all_costs_exo, 85)
-    idx_min_exo = np.argmin(np.abs(np.array(all_costs_exo) - p15))
-    idx_max_exo = np.argmin(np.abs(np.array(all_costs_exo) - p85))
     
-    """ 
-    # # 找到最高和最低solar learning rate 的索引
-    omega_solar = [omega['solar pv electricity'] for omega in all_omega_exo]
-    idx_min_exo = np.argmin(omega_solar)
-    idx_max_exo = np.argmax(omega_solar)
-    print('lowest lr exo:', min(omega_solar))
-    print('highest lr exo:', max(omega_solar))
+    # # 找85 和15 percentile cost 索引
+    # p15 = np.percentile(all_costs_exo, 15)
+    # p85 = np.percentile(all_costs_exo, 85)
+    # idx_min_exo = np.argmin(np.abs(np.array(all_costs_exo) - p15))
+    # idx_max_exo = np.argmin(np.abs(np.array(all_costs_exo) - p85))
+    
+    
+    # # # 找到最高和最低solar learning rate 的索引
+    # omega_solar = [omega['solar pv electricity'] for omega in all_omega_exo]
+    # idx_min_exo = np.argmin(omega_solar)
+    # idx_max_exo = np.argmax(omega_solar)
+    # print('lowest lr exo:', min(omega_solar))
+    # print('highest lr exo:', max(omega_solar))
     
 
     
@@ -187,23 +190,23 @@ if simulate:
             all_omega_policy.append(copy.deepcopy(model.omega))  # 记录本次sample的learning rate参数
 
             
-            if scenario == sim_scenario  and savegif:
-                print("saving the figure...")
-                #model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
-                #model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                #model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
+            # if scenario == sim_scenario  and savegif:
+            #     print("saving the figure...")
+            #     model.make_gif(f'dynamic_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotFinalEnergyBySource(label, filename=f'{n}_dynamic_area_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotFinalEnergy(label,filename=f'{n}_dynamic_{scenario.replace(" ", "_")}_{n}')
                 
-                #model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
-                shares_df = model.get_generation_shares()
-                #print(shares_df)
-                all_shares.append(shares_df)
+            #     model.plotIndividualTechAreas(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+            #     model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
+            #     shares_df = model.get_generation_shares()
+            #     #print(shares_df)
+            #     all_shares.append(shares_df)
 
     # 找到最高和最低cost 索引
     
-    # idx_min_policy = np.argmin(all_costs_policy)
-    # idx_max_policy = np.argmax(all_costs_policy)
+    idx_min_policy = np.argmin(all_costs_policy)
+    idx_max_policy = np.argmax(all_costs_policy)
 
     
     """
@@ -218,11 +221,11 @@ if simulate:
 
     #找到最高/最低solar learning rate 的索引 （可以替换其他tech）
 
-    omega_solar_policy = [omega['solar pv electricity'] for omega in all_omega_policy]
-    idx_min_policy = np.argmin(omega_solar_policy)
-    idx_max_policy = np.argmax(omega_solar_policy)
-    print('lowest lr policy:', min(omega_solar_policy))
-    print('highest lr policy:', max(omega_solar_policy))
+    # omega_solar_policy = [omega['solar pv electricity'] for omega in all_omega_policy]
+    # idx_min_policy = np.argmin(omega_solar_policy)
+    # idx_max_policy = np.argmax(omega_solar_policy)
+    # print('lowest lr policy:', min(omega_solar_policy))
+    # print('highest lr policy:', max(omega_solar_policy))
 
 
 
@@ -335,7 +338,7 @@ if simulate:
 
     #### ------ Exogenous
 
-    """
+  
     plot_final_energy_by_source(all_q_exo[idx_min_exo], label, "Exogenous: Final Energy (Lowest Cost)", name="exo_lowest_final_energy")
     plot_all_tech_costs(all_c_exo[idx_min_exo], label, "Exogenous: All Tech Costs (Lowest Cost)", name="exo_lowest_all_tech_costs")
     plot_q_vs_time(all_q_exo[idx_min_exo], label, "Exogenous: q vs Time (Lowest Cost)", name="exo_lowest_q_vs_time")
@@ -358,30 +361,30 @@ if simulate:
     
 
 
-    """
+    
     
     # --- 画最低和最高 (solar) learning rate 的轨迹并保存 ---
 
     #### ------ Exogenous
 
-    plot_final_energy_by_source(all_q_exo[idx_min_exo], label, "Exogenous: Final Energy (Lowest lr)", name="exo_lowest_lr_final_energy")
-    plot_all_tech_costs(all_c_exo[idx_min_exo], label, "Exogenous: All Tech Costs (Lowest lr)", name="exo_lowest_lr_all_tech_costs")
-    plot_q_vs_time(all_q_exo[idx_min_exo], label, "Exogenous: q vs Time (Lowest lr)", name="exo_lowest_lr_q_vs_time")
+    # plot_final_energy_by_source(all_q_exo[idx_min_exo], label, "Exogenous: Final Energy (Lowest lr)", name="exo_lowest_lr_final_energy")
+    # plot_all_tech_costs(all_c_exo[idx_min_exo], label, "Exogenous: All Tech Costs (Lowest lr)", name="exo_lowest_lr_all_tech_costs")
+    # plot_q_vs_time(all_q_exo[idx_min_exo], label, "Exogenous: q vs Time (Lowest lr)", name="exo_lowest_lr_q_vs_time")
 
-    plot_final_energy_by_source(all_q_exo[idx_max_exo], label, "Exogenous: Final Energy (Highest lr)", name="exo_highest_lr_final_energy")
-    plot_all_tech_costs(all_c_exo[idx_max_exo], label, "Exogenous: All Tech Costs (Highest lr)", name="exo_highest_lr_all_tech_costs")
-    plot_q_vs_time(all_q_exo[idx_max_exo], label, "Exogenous: q vs Time (Highest lr)", name="exo_Highest_lr_q_vs_time")
+    # plot_final_energy_by_source(all_q_exo[idx_max_exo], label, "Exogenous: Final Energy (Highest lr)", name="exo_highest_lr_final_energy")
+    # plot_all_tech_costs(all_c_exo[idx_max_exo], label, "Exogenous: All Tech Costs (Highest lr)", name="exo_highest_lr_all_tech_costs")
+    # plot_q_vs_time(all_q_exo[idx_max_exo], label, "Exogenous: q vs Time (Highest lr)", name="exo_Highest_lr_q_vs_time")
 
 
-    #### ------ Policy
+    # #### ------ Policy
 
-    plot_final_energy_by_source(all_q_policy[idx_min_policy], label, "Policy: Final Energy (Lowest lr)", name="policy_lowest_lr_final_energy")
-    plot_all_tech_costs(all_c_policy[idx_min_policy], label, "Policy: All Tech Costs (Lowest lr)", name="policy_lowest_lr_all_tech_costs")
-    plot_q_vs_time(all_q_policy[idx_min_policy], label, "Policy: q vs Time (Lowest lr)", name="policy_lowest_lr_q_vs_time")
+    # plot_final_energy_by_source(all_q_policy[idx_min_policy], label, "Policy: Final Energy (Lowest lr)", name="policy_lowest_lr_final_energy")
+    # plot_all_tech_costs(all_c_policy[idx_min_policy], label, "Policy: All Tech Costs (Lowest lr)", name="policy_lowest_lr_all_tech_costs")
+    # plot_q_vs_time(all_q_policy[idx_min_policy], label, "Policy: q vs Time (Lowest lr)", name="policy_lowest_lr_q_vs_time")
 
-    plot_final_energy_by_source(all_q_policy[idx_max_policy], label, "Policy: Final Energy (Highest lr)", name="policy_highest_lr_final_energy")
-    plot_all_tech_costs(all_c_policy[idx_max_policy], label, "Policy: All Tech Costs (Highest lr)", name="policy_highest_lr_all_tech_costs")
-    plot_q_vs_time(all_q_policy[idx_max_policy], label, "Policy: q vs Time (Highest lr)", name="policy_highest_lr_q_vs_time")
+    # plot_final_energy_by_source(all_q_policy[idx_max_policy], label, "Policy: Final Energy (Highest lr)", name="policy_highest_lr_final_energy")
+    # plot_all_tech_costs(all_c_policy[idx_max_policy], label, "Policy: All Tech Costs (Highest lr)", name="policy_highest_lr_all_tech_costs")
+    # plot_q_vs_time(all_q_policy[idx_max_policy], label, "Policy: q vs Time (Highest lr)", name="policy_highest_lr_q_vs_time")
   
 
 
