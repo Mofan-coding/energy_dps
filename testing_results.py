@@ -25,12 +25,12 @@ simulate = True
 # needed to explore parameters' uncertainty
 # used only if new simulations are run
 
-nsim =100
-label = '083001'
+nsim =300
+label = '090201'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
-hidden_size = 2
+hidden_size = 8
 input_norm = False
 
 
