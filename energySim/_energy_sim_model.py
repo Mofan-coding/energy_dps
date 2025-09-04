@@ -1152,9 +1152,9 @@ class EnergyModel:
 
                 if self.y > self.y0:
 
-                    self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][idx], 1e-9)) #without smoothing
-                    # self.ema_electrolyzer = 0.8 * self.ema_electrolyzer + \
-                    #     0.2 * np.log10(max(self.c['electrolyzers'][idx], 1e-9))
+                    #self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][idx], 1e-9)) #without smoothing
+                    self.ema_electrolyzer = 0.8 * self.ema_electrolyzer + \
+                        0.2 * np.log10(max(self.c['electrolyzers'][idx], 1e-9))
 
 
                 pol_input = [
