@@ -56,6 +56,8 @@ class EnergyModel:
         # carriers to sectors
         self.sectorInputs = [[0,3,4],[0,1,2,3,4],[0,1,2,3,4],[3]]
 
+        self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][self.y0], 1e-9))   # Init ema of electrolyzer unit cost 
+        
         # define slack variables per sector - no transition below
         self.slack = slack
 
@@ -838,7 +840,7 @@ class EnergyModel:
                             self.totalCost[y-self.y0]
 
         self.discountedCost = np.sum(self.discountedCost)
-        
+
         return self.discountedCost
 
 
@@ -1114,26 +1116,56 @@ class EnergyModel:
 
                 # decide every year 
 
-                if self.y == self.y0:
-                    pol_input = [np.log10(self.c[t][self.y-self.y0]),
-                                    np.log10(self.z[t][self.y-self.y0])/10,
-                                    (self.y-self.y0)/(self.yend-self.y0),
-                                    10*(sum([self.q[self.technology[x]][self.y-self.y0] \
-                                            for x in self.carrierInputs[self.carrier.index('electricity')]])/\
-                                                self.elec[self.y-self.y0] - 1),
-                                    self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
-                                    np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
-                                    ]
-                else:
-                    pol_input = [np.log10(self.c[t][self.y-self.y0]),
-                                    np.log10(self.z[t][self.y-self.y0])/10,
-                                    (self.y-self.y0)/(self.yend-self.y0),
-                                    10*((sum([self.q[self.technology[x]][self.y-self.y0] \
-                                            for x in self.carrierInputs[self.carrier.index('electricity')]])/\
-                                                self.elec[self.y-self.y0] - 1)),
-                                    self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
-                                    np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
-                                    ]
+
+                # if self.y == self.y0:
+                #     pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                #                     np.log10(self.z[t][self.y-self.y0])/10,
+                #                     (self.y-self.y0)/(self.yend-self.y0),
+                #                     10*(sum([self.q[self.technology[x]][self.y-self.y0] \
+                #                             for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                #                                 self.elec[self.y-self.y0] - 1),
+                #                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                #                     #np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
+                #                     self.ema_electrolyzer
+                #                     ]
+                # else:
+                #     self.ema_electrolyzer = 0.8*self.ema_electrolyzer + 0.2*np.log10(self.c['electrolyzers'][self.y-self.y0])
+                #     pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                #                     np.log10(self.z[t][self.y-self.y0])/10,
+                #                     (self.y-self.y0)/(self.yend-self.y0),
+                #                   10*((sum([self.q[self.technology[x]][self.y-self.y0] \
+                #                       for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                #                        self.elec[self.y-self.y0] - 1)),
+                #                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                #                     #np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
+                #                     self.ema_electrolyzer
+                #                   ]
+
+                idx = self.y - self.y0
+                log_c_t = np.log10(max(self.c[t][idx], 1e-9))
+                log_z_t = np.log10(max(self.z[t][idx], 1e-9)) / 10.0
+                time_feat = (self.y - self.y0) / (self.yend - self.y0)
+                elec_share_sum = sum(self.q[self.technology[x]][idx]
+                                    for x in self.carrierInputs[self.carrier.index('electricity')])
+                grid_balance = 10.0 * (elec_share_sum / self.elec[idx] - 1.0)
+                tech_share = self.q[t][idx] / self.elec[idx]
+
+                if self.y > self.y0:
+
+                    self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][idx], 1e-9)) #without smoothing
+                    # self.ema_electrolyzer = 0.8 * self.ema_electrolyzer + \
+                    #     0.2 * np.log10(max(self.c['electrolyzers'][idx], 1e-9))
+
+
+                pol_input = [
+                    log_c_t,
+                    log_z_t,
+                    time_feat,
+                    grid_balance,
+                    tech_share,
+                    self.ema_electrolyzer,  # 平滑后的电解槽成本
+                ]
+
                 
                 
                 #归一化
@@ -1346,8 +1378,8 @@ class EnergyModel:
          #P2X产量 = 各部门直接需求 + 为吸收VRE间歇性而额外生产的P2X燃料
          #这样可以模拟“VRE越多，P2X需求越大
 
-        # if self.y == 2050:
-        #     print(self.y)
+        # if self.y == 2099:
+        #     #print(self.y)
         #     print('STEP9:P2x sector:',  sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
         #                 for s in self.sector]))
         #     print('STEP9:P2x reneable:',  2 * psi * \
