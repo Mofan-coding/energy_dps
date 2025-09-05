@@ -165,7 +165,7 @@ class SNES:
 
     
     def train(self, label, iter=None, batch_size=None,
-              popsize=None, dist=None):
+              popsize=None, dist=None, agg = 'median', percentile = 70):
     
         if iter is not None:
             self.iter = iter
@@ -216,7 +216,7 @@ class SNES:
              #但PyTorch神经网络需要的是“分块”的参数结构（每层一个张量）。
              #所以采样/优化后，需要把一维向量拆分还原成各层参数，再加载到网络里。
 
-    def step(self):
+    def step(self, agg = 'median', percentile = 70):
         # sample noise
         noise = torch.randn(self.popsize, *self.mu.shape)
         #self.mu 是所有参数拉平后的一维均值向量
@@ -271,7 +271,16 @@ class SNES:
         #print(self.mu)
         #print(self.sigma)
 
-        return torch.median(objs).item()
+        #return torch.median(objs).item()
+        if agg == 'median':
+            return torch.median(objs).item()
+        elif agg == 'mean':
+            return torch.mean(objs).item()
+        elif agg == 'percentile':
+            return np.percentile(objs.numpy(), percentile)
+        else:
+            raise ValueError("agg must be 'median', 'mean', or 'percentile'")
+
 
 
 # ray actor (class) for distributed simulation 

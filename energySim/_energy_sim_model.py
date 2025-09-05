@@ -56,7 +56,6 @@ class EnergyModel:
         # carriers to sectors
         self.sectorInputs = [[0,3,4],[0,1,2,3,4],[0,1,2,3,4],[3]]
 
-        self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][self.y0], 1e-9))   # Init ema of electrolyzer unit cost 
         
         # define slack variables per sector - no transition below
         self.slack = slack
@@ -237,6 +236,8 @@ class EnergyModel:
         self.C = {}
         for t in self.technology:
             self.C[t] = np.zeros(self.yend - self.y0 + 1)
+
+        self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][self.y - self.y0], 1e-9))   # Init ema of electrolyzer unit cost 
 
         #initialize unit cost and cumulative production dictionaries
         self.u = {}
