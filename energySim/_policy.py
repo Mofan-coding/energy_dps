@@ -272,6 +272,7 @@ class SNES:
         #print(self.sigma)
 
         #return torch.median(objs).item()
+
         if agg == 'median':
             return torch.median(objs).item()
         elif agg == 'mean':
@@ -291,7 +292,7 @@ class Simulator:
         self.env = env.copy()
 
     # simulate the policy
-    def simulate_policy(self, policy, batch_size):
+    def simulate_policy(self, policy, batch_size, agg = 'mean',percentile = 70):
 
         with torch.no_grad():
             # set parameters of policy
@@ -306,4 +307,15 @@ class Simulator:
             # np.random.seed(0)
             for b in range(batch_size):
                 simobjs[b] = self.env.simulate()
-        return np.mean(simobjs)
+        
+        if agg == 'mean':
+            return np.mean(simobjs)   
+        elif agg == 'median':
+            return np.median(simobjs)
+        elif agg == 'percentile':
+            return np.percentile(simobjs, percentile)
+        else:
+            raise ValueError("agg must be 'mean', 'median', or 'percentile'")
+
+
+    
