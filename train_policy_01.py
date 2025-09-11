@@ -26,8 +26,8 @@ model = _energy_sim_model.EnergyModel(
 )
 
 model.mode = 'policy'
-#model.policy.train(label, iter= 600, batch_size= 400 , popsize=16, dist=True,agg='percentile', percentile=70) #pop size不大于 cpus-per-task
-model.policy.train(label, iter = 2, batch_size = 2,popsize = 2, dist = True, agg='median', percentile=70)
+model.policy.train(label, iter= 600, batch_size= 400 , popsize=16, dist=True,agg='percentile', percentile=70) #pop size不大于 cpus-per-task
+#model.policy.train(label, iter = 2, batch_size = 2,popsize = 2, dist = True, agg='median', percentile=70)
 os.makedirs('results', exist_ok=True)
 policy_path = f'results/{label}_{scenario}_policy.pth'
 model.policy.save(policy_path)
