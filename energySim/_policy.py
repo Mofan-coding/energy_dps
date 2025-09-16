@@ -273,14 +273,16 @@ class SNES:
 
         #return torch.median(objs).item()
 
-        if agg == 'median':
-            return torch.median(objs).item()
-        elif agg == 'mean':
-            return torch.mean(objs).item()
-        elif agg == 'percentile':
-            return np.percentile(objs.numpy(), percentile)
-        else:
-            raise ValueError("agg must be 'median', 'mean', or 'percentile'")
+        # if agg == 'median':
+        #     return torch.median(objs).item()
+        # elif agg == 'mean':
+        #     return torch.mean(objs).item()
+        # elif agg == 'percentile':
+        #     return np.percentile(objs.numpy(), percentile)
+        # else:
+        #     raise ValueError("agg must be 'median', 'mean', or 'percentile'")
+
+        return np.percentile(objs.numpy(),70)
 
 
 

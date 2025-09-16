@@ -31,11 +31,11 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '090302'
+label = '091001'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
-hidden_size = 8
+hidden_size = 2
 input_norm = False
 
 savegif = True #individual simulation dynamics 
@@ -128,8 +128,9 @@ if simulate:
             #     model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
             
     # 找最低和最高cost索引
-    # idx_min_exo = np.argmin(all_costs_exo)
-    # idx_max_exo = np.argmax(all_costs_exo)
+    idx_min_exo = np.argmin(all_costs_exo)
+    idx_max_exo = np.argmax(all_costs_exo)
+    print('exo highest cost:',max(all_costs_exo))
 
     # # # 找对应的learning rate参数
     # #omega_min_exo = all_omega_exo[idx_min_exo]
@@ -137,11 +138,11 @@ if simulate:
 
 
     
-    # 找85 和15 percentile cost 索引
-    p15 = np.percentile(all_costs_exo, 15)
-    p85 = np.percentile(all_costs_exo, 85)
-    idx_min_exo = np.argmin(np.abs(np.array(all_costs_exo) - p15))
-    idx_max_exo = np.argmin(np.abs(np.array(all_costs_exo) - p85))
+    # # 找85 和15 percentile cost 索引
+    # p15 = np.percentile(all_costs_exo, 15)
+    # p85 = np.percentile(all_costs_exo, 85)
+    # idx_min_exo = np.argmin(np.abs(np.array(all_costs_exo) - p15))
+    # idx_max_exo = np.argmin(np.abs(np.array(all_costs_exo) - p85))
     
     
     # # # # 找到最高和最低solar learning rate 的索引
@@ -205,21 +206,18 @@ if simulate:
 
     # 找到最高和最低cost 索引
     
-    # idx_min_policy = np.argmin(all_costs_policy)
-    # idx_max_policy = np.argmax(all_costs_policy)
+    idx_min_policy = np.argmin(all_costs_policy)
+    idx_max_policy = np.argmax(all_costs_policy)
+
+    print('policy highest cost:', max(all_costs_policy))
    
 
-
- 
-    
-
-    
   
-    # 找到85和15 percentile cost 索引
-    p15 = np.percentile(all_costs_policy, 15)
-    p85 = np.percentile(all_costs_policy, 85)
-    idx_min_policy = np.argmin(np.abs(np.array(all_costs_policy) - p15))
-    idx_max_policy = np.argmin(np.abs(np.array(all_costs_policy) - p85))        
+    # # 找到85和15 percentile cost 索引
+    # p15 = np.percentile(all_costs_policy, 15)
+    # p85 = np.percentile(all_costs_policy, 85)
+    # idx_min_policy = np.argmin(np.abs(np.array(all_costs_policy) - p15))
+    # idx_max_policy = np.argmin(np.abs(np.array(all_costs_policy) - p85))        
  
 
 
