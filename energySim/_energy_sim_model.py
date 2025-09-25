@@ -268,7 +268,7 @@ class EnergyModel:
         self.mode = mode
 
         # define policy
-        self.policy = Policy.SNES(state_dim=6, 
+        self.policy = Policy.SNES(state_dim=5, 
                                   action_dim=1,
                                   env=self, 
                                   iter=100,
@@ -830,6 +830,23 @@ class EnergyModel:
                             sum([self.q[self.technology[x]][y-self.y0]  \
                                     for x in self.carrierInputs\
                                     [self.carrier.index('electricity')]]))
+            
+            ## 新增：Overbuild penalty - 允许30%余量
+            total_elec_supply = sum([self.q[self.technology[x]][y-self.y0]  \
+                                    for x in self.carrierInputs\
+                                    [self.carrier.index('electricity')]])
+            elec_demand = self.elec[y-self.y0]
+            overbuild_ratio = total_elec_supply / (elec_demand + 1e-9)  # 避免除零
+            if overbuild_ratio > 1.3:  # 超过30%余量开始惩罚
+            # 温和的二次惩罚，比underbuild penalty轻
+                excess_ratio = overbuild_ratio - 1.3
+                ## using overbuild penalty of 500 USD/MWh (much lighter than underbuild)
+                ## with quadratic scaling based on excess ratio
+                overbuild_penalty = 500 * 1/(1000/(60*60)) * 1e9 * \
+                                (excess_ratio**2) * elec_demand
+                self.totalCost[y-self.y0] += overbuild_penalty
+
+
 
         # compute discounted cost
         # discount rate is sate to be 2% (0.02) 
@@ -1118,52 +1135,52 @@ class EnergyModel:
                 # decide every year 
 
 
-                # if self.y == self.y0:
-                #     pol_input = [np.log10(self.c[t][self.y-self.y0]),
-                #                     np.log10(self.z[t][self.y-self.y0])/10,
-                #                     (self.y-self.y0)/(self.yend-self.y0),
-                #                     10*(sum([self.q[self.technology[x]][self.y-self.y0] \
-                #                             for x in self.carrierInputs[self.carrier.index('electricity')]])/\
-                #                                 self.elec[self.y-self.y0] - 1),
-                #                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
-                #                     np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
-                #                     ]
-                # else:
+                if self.y == self.y0:
+                    pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                                    np.log10(self.z[t][self.y-self.y0])/10,
+                                    (self.y-self.y0)/(self.yend-self.y0),
+                                    10*(sum([self.q[self.technology[x]][self.y-self.y0] \
+                                            for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                                                self.elec[self.y-self.y0] - 1),
+                                    self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                    #np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
+                                    ]
+                else:
                     
-                #     pol_input = [np.log10(self.c[t][self.y-self.y0]),
-                #                     np.log10(self.z[t][self.y-self.y0])/10,
-                #                     (self.y-self.y0)/(self.yend-self.y0),
-                #                   10*((sum([self.q[self.technology[x]][self.y-self.y0] \
-                #                       for x in self.carrierInputs[self.carrier.index('electricity')]])/\
-                #                        self.elec[self.y-self.y0] - 1)),
-                #                     self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
-                #                     np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
-                #                   ]
+                    pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                                    np.log10(self.z[t][self.y-self.y0])/10,
+                                    (self.y-self.y0)/(self.yend-self.y0),
+                                  10*((sum([self.q[self.technology[x]][self.y-self.y0] \
+                                      for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                                       self.elec[self.y-self.y0] - 1)),
+                                    self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                    #np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
+                                  ]
 
-                idx = self.y - self.y0
-                log_c_t = np.log10(max(self.c[t][idx], 1e-9))
-                log_z_t = np.log10(max(self.z[t][idx], 1e-9)) / 10.0
-                time_feat = (self.y - self.y0) / (self.yend - self.y0)
-                elec_share_sum = sum(self.q[self.technology[x]][idx]
-                                    for x in self.carrierInputs[self.carrier.index('electricity')])
-                grid_balance = 10.0 * (elec_share_sum / self.elec[idx] - 1.0)
-                tech_share = self.q[t][idx] / self.elec[idx]
+                # idx = self.y - self.y0
+                # log_c_t = np.log10(max(self.c[t][idx], 1e-9))
+                # log_z_t = np.log10(max(self.z[t][idx], 1e-9)) / 10.0
+                # time_feat = (self.y - self.y0) / (self.yend - self.y0)
+                # elec_share_sum = sum(self.q[self.technology[x]][idx]
+                #                     for x in self.carrierInputs[self.carrier.index('electricity')])
+                # grid_balance = 10.0 * (elec_share_sum / self.elec[idx] - 1.0)
+                # tech_share = self.q[t][idx] / self.elec[idx]
 
-                if self.y > self.y0:
+                # if self.y > self.y0:
 
-                    #self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][idx], 1e-9)) #without smoothing
-                    self.ema_electrolyzer = 0.8 * self.ema_electrolyzer + \
-                        0.2 * np.log10(max(self.c['electrolyzers'][idx], 1e-9))
+                #     #self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][idx], 1e-9)) #without smoothing
+                #     self.ema_electrolyzer = 0.8 * self.ema_electrolyzer + \
+                #         0.2 * np.log10(max(self.c['electrolyzers'][idx], 1e-9))
 
 
-                pol_input = [
-                    log_c_t,
-                    log_z_t,
-                    time_feat,
-                    grid_balance,
-                    tech_share,
-                    self.ema_electrolyzer,  # 平滑后的电解槽成本
-                ]
+                # pol_input = [
+                #     log_c_t,
+                #     log_z_t,
+                #     time_feat,
+                #     grid_balance,
+                #     tech_share,
+                #     self.ema_electrolyzer,  # 平滑后的电解槽成本
+                # ]
 
                 
                 

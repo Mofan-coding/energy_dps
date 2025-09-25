@@ -31,7 +31,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '091001'
+label = '082201'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -176,6 +176,11 @@ if simulate:
     all_c_policy = []
     all_omega_policy = []
 
+    all_C_policy = []        # 各技术的年度成本
+    all_totalCost_policy = [] # 年度总成本
+    all_gridInv_policy = []   # 电网投资成本
+    all_elec_policy = []      # 电力需求
+
     for n in range(nsim):
         # for each cost assumption, compute total costs
         # and append it to the dictionary
@@ -190,6 +195,11 @@ if simulate:
             all_c_policy.append(copy.deepcopy(model.c))
             all_omega_policy.append(copy.deepcopy(model.omega))  # 记录本次sample的learning rate参数
 
+            all_C_policy.append(copy.deepcopy(model.C))           # 各技术年度成本
+            all_totalCost_policy.append(copy.deepcopy(model.totalCost)) # 年度总成本
+            all_gridInv_policy.append(copy.deepcopy(model.gridInv))     # 电网成本  
+            all_elec_policy.append(copy.deepcopy(model.elec))           # 电力需求
+
             
             # if scenario == sim_scenario  and savegif:
             #     print("saving the figure...")
@@ -203,22 +213,72 @@ if simulate:
             #     shares_df = model.get_generation_shares()
             #     #print(shares_df)
             #     all_shares.append(shares_df)
+    
+    
+    def print_detailed_cost_breakdown(idx, scenario_name):
+        print(f"\n=== {scenario_name} Detailed Cost Breakdown ===")
+        
+        # 各技术的总成本
+        print("Technology Costs (trillion USD):")
+        tech_costs = {}
+        total_tech_cost = 0
+        for tech in model.technology[:13]:  # 前13个是主要技术
+            tech_total_cost = sum(all_C_policy[idx][tech]) * 1e-12  # 转换为trillion USD
+            tech_costs[tech] = tech_total_cost
+            total_tech_cost += tech_total_cost
+            print(f"  {tech}: {tech_total_cost:.3f}")
+        
+        # 电网成本
+        grid_total_cost = sum(all_gridInv_policy[idx]) * 1e-3  # 从billion转为trillion USD
+        print(f"  Grid investment: {grid_total_cost:.3f}")
+        
+        # 总成本
+        system_total_cost = sum(all_totalCost_policy[idx]) * 1e-12
+        print(f"\nTotal system cost: {system_total_cost:.3f} trillion USD")
+        print(f"NPV (discounted): {all_costs_policy[idx]:.3f} trillion USD")
+        
+        # 检查是否有电力缺口惩罚
+        print(f"\n=== Electricity Balance Check ===")
+        penalty_found = False
+        for y in range(model.y0, min(model.yend+1, model.y0+51)):  # 检查前50年
+            elec_demand = all_elec_policy[idx][y-model.y0]
+            elec_supply = sum(all_q_policy[idx][tech][y-model.y0] 
+                            for tech in model.technology[3:10])  # 发电技术
+            deficit = max(0, elec_demand - elec_supply)
+            if deficit > 0.1:  # 有明显缺口
+                penalty_cost = 10000 * 1/(1000/(60*60)) * 1e9 * deficit * 1e-12
+                print(f"Year {y}: Deficit={deficit:.2f} EJ, Penalty={penalty_cost:.3f} trillion USD")
+                penalty_found = True
+        
+        if not penalty_found:
+            print("No significant electricity deficit penalties found.")
+        
+        return tech_costs
 
-    # 找到最高和最低cost 索引
+    #找到最高和最低cost 索引
     
     idx_min_policy = np.argmin(all_costs_policy)
     idx_max_policy = np.argmax(all_costs_policy)
 
     print('policy highest cost:', max(all_costs_policy))
+    # 分析最高和最低成本scenario
+    print_detailed_cost_breakdown(idx_min_policy, "Policy Lowest Cost")
+    print_detailed_cost_breakdown(idx_max_policy, "Policy Highest Cost")
+
    
 
   
-    # # 找到85和15 percentile cost 索引
-    # p15 = np.percentile(all_costs_policy, 15)
-    # p85 = np.percentile(all_costs_policy, 85)
+    # # # 找到85和15 percentile cost 索引
+    # p15 = np.percentile(all_costs_policy, 5)
+    # p85 = np.percentile(all_costs_policy, 95)
     # idx_min_policy = np.argmin(np.abs(np.array(all_costs_policy) - p15))
     # idx_max_policy = np.argmin(np.abs(np.array(all_costs_policy) - p85))        
  
+    # print('policy 95 highest cost:', p85)
+    # # 分析最高和最低成本scenario
+    # print_detailed_cost_breakdown(idx_min_policy, "Policy 5 Lowest Cost")
+    # print_detailed_cost_breakdown(idx_max_policy, "Policy 95 Highest Cost")
+
 
 
     #找到最高/最低solar learning rate 的索引 （可以替换其他tech）
