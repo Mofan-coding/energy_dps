@@ -31,7 +31,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '082201'
+label = '092401'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -240,19 +240,39 @@ if simulate:
         # 检查是否有电力缺口惩罚
         print(f"\n=== Electricity Balance Check ===")
         penalty_found = False
-        for y in range(model.y0, min(model.yend+1, model.y0+51)):  # 检查前50年
+        overbuild_penalty_found = False
+
+    
+        for y in range(model.y0, model.yend+1):
             elec_demand = all_elec_policy[idx][y-model.y0]
-            elec_supply = sum(all_q_policy[idx][tech][y-model.y0] 
-                            for tech in model.technology[3:10])  # 发电技术
+            elec_supply = sum([all_q_policy[idx][model.technology[x]][y-model.y0] 
+                          for x in model.carrierInputs[model.carrier.index('electricity')]])
+            
             deficit = max(0, elec_demand - elec_supply)
+
+            #检查underbuild penalty
             if deficit > 0.1:  # 有明显缺口
                 penalty_cost = 10000 * 1/(1000/(60*60)) * 1e9 * deficit * 1e-12
                 print(f"Year {y}: Deficit={deficit:.2f} EJ, Penalty={penalty_cost:.3f} trillion USD")
                 penalty_found = True
+            
+                 
+            # 检查overbuild penalty
+            overbuild_ratio = elec_supply / (elec_demand + 1e-9)
+            if overbuild_ratio > 1.3:
+                excess_ratio = overbuild_ratio - 1.3
+                overbuild_penalty = 500 * 1/(1000/(60*60)) * 1e9 * \
+                                (excess_ratio**2) * elec_demand * 1e-12
+                print(f"Year {y}: Overbuild ratio={overbuild_ratio:.2f}, Overbuild Penalty={overbuild_penalty:.3f} trillion USD")
+                overbuild_penalty_found = True
+        
         
         if not penalty_found:
             print("No significant electricity deficit penalties found.")
-        
+    
+        if not overbuild_penalty_found:
+            print("No significant electricity overbuild penalties found.")
+            
         return tech_costs
 
     #找到最高和最低cost 索引

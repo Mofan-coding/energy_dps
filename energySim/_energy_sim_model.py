@@ -1134,7 +1134,7 @@ class EnergyModel:
 
                 # decide every year 
 
-
+              
                 if self.y == self.y0:
                     pol_input = [np.log10(self.c[t][self.y-self.y0]),
                                     np.log10(self.z[t][self.y-self.y0])/10,
@@ -1201,6 +1201,14 @@ class EnergyModel:
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 gt = min(1.0, gt)
+
+                # add emerfency brack
+                if t == 'solar pv electricity':
+
+                    current_share = self.q[t][self.y-self.y0]/self.elec[self.y-self.y0]
+                    if current_share > 1.0:
+                        gt = max(gt, 0.0)
+
              
                 #gt_max = self.gt_clip
                 #gt = min(gt_max, max(gt_max,gt))  # clip gt
