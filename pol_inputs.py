@@ -5,7 +5,7 @@ import numpy as np
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '092401'
+label = '092601'
 scenario = 'fast transition'
 policy_path = f'results/{label}_{scenario}_policy.pth'
 nsim = 1
@@ -48,6 +48,15 @@ def logging_get_action(pol_input):
 
             gt = orig_get_action(pol_input)
 
+            gt_final = gt
+            current_share = model.q['solar pv electricity'][year-model.y0] / model.elec[year-model.y0]
+        
+            if current_share > 1.0:
+
+                gt_final = min(gt, 0.0001)
+                print(gt_final)
+            
+
             solar_inputs.append(arr.tolist())
             print(f"Solar year {year}: inputs={arr}")
             print(f"  Tech cost: {arr[0]:.3f}")
@@ -63,7 +72,7 @@ def logging_get_action(pol_input):
                 else:
                     print(f"  Growth rate output: {gt}")
             else:
-                print(f"  Growth rate output: {gt:.3f}")
+                print(f"  Growth rate output: {gt_final:.3f}")
 
         call_count +=1
 

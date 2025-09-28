@@ -1207,7 +1207,7 @@ class EnergyModel:
 
                     current_share = self.q[t][self.y-self.y0]/self.elec[self.y-self.y0]
                     if current_share > 1.0:
-                        gt = max(gt, 0.0)
+                        gt = min(gt, 0.0001)
 
              
                 #gt_max = self.gt_clip
