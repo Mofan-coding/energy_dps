@@ -11,9 +11,18 @@ import math
 
 
 ##### test 
-# 0828 02energy_sim_model
+# 0821 01energy_sim_model
 
-# let policy decide storage, electrolyzer, and add penalty for not meeting VRE! 
+# repeat step 4 after step9
+# recompute p2x based on actual wind and solar production--> let p2x cost constrain solar and wind production!
+
+
+# 0826
+
+# elec slack technology in the end (because both exo and policy need it! ) not good, no use any more
+
+# 0830
+# add electorlyzer unit cost as a tech input
 
 # model class
 class EnergyModel:
@@ -1079,12 +1088,9 @@ class EnergyModel:
               
 
         elif self.mode == 'policy':
-
-            techs = [self.technology[x] for x in self.carrierInputs[self.carrier.index('electricity')]]
-            techs.append('electrolyzers')
-
-            for t in techs:
-
+            for t in [self.technology[x] \
+                    for x in self.carrierInputs\
+                        [self.carrier.index('electricity')]]:
                 
                 # inputs for each technology"
                 # 1) unit cost of generation from technology
@@ -1196,12 +1202,12 @@ class EnergyModel:
                 gt = self.policy.get_action(pol_input)
                 gt = min(1.0, gt)
 
-                # # add emerfency brack
-                # if t == 'solar pv electricity':
+                # add emerfency brack
+                if t == 'solar pv electricity':
 
-                #     current_share = self.q[t][self.y-self.y0]/self.elec[self.y-self.y0]
-                #     if current_share > 1.0:
-                #         gt = min(gt, 0.0001)
+                    current_share = self.q[t][self.y-self.y0]/self.elec[self.y-self.y0]
+                    if current_share > 1.0:
+                        gt = min(gt, 0.0001)
 
              
                 #gt_max = self.gt_clip
@@ -1328,130 +1334,90 @@ class EnergyModel:
         self.q['daily batteries'][self.y+1-self.y0] = \
             self.q['qgrid'][self.y+1-self.y0] + \
                 self.q['qtransport'][self.y+1-self.y0]
+
+        # 9 Calculate the quantity of 
+        # multi-day storage batteries required
         
-        if self.mode == "exogenous":
-
-            # 9 Calculate the quantity of 
-            # multi-day storage batteries required
-            
-            # compute long term storage
-            gt0, gT, t1, t2, t3, psi = \
-                self.EFgp['multi-day batteries','electricity']
-            self.q['multi-day storage'][self.y+1-self.y0] = \
-                min((1 + 0.01*gt0) * \
-                            self.q['multi-day storage'][self.y-self.y0], \
-                    psi/365 * (\
-                        self.q['solar pv electricity'][self.y+1-self.y0] + \
-                        self.q['wind electricity'][self.y+1-self.y0]))
-            
-
+        # compute long term storage
+        gt0, gT, t1, t2, t3, psi = \
+            self.EFgp['multi-day batteries','electricity']
+        self.q['multi-day storage'][self.y+1-self.y0] = \
+            min((1 + 0.01*gt0) * \
+                        self.q['multi-day storage'][self.y-self.y0], \
+                psi/365 * (\
+                    self.q['solar pv electricity'][self.y+1-self.y0] + \
+                    self.q['wind electricity'][self.y+1-self.y0]))
         
 
-            # slack 
+       
 
-            """
-    
-            self.q[sl][self.y+1-self.y0] = \
-                max(0, self.elec[self.y+1-self.y0] - \
-                    sum([self.q[t][self.y+1-self.y0] for t in \
-                        [self.technology[x] for x in \
-                            self.carrierInputs\
-                                [self.carrier.index('electricity')]] \
-                                    if t != sl]))
-            """
+        # slack 
 
-
-            # 0822 add step: recompute P2X based on actual solar and wind
-
-            # compute P2X fuel needs
-            gt0, gT, t1, t2, t3, psi = \
-                        self.EFgp['P2Xfuels','electricity']  
-            gt0 = 0
-            gT = 20
-            t1 = 13
-            t2 = t3
-            # compute growth rate
-            if self.y - self.y0 < t1:
-                gt = 0.01 * gt0
-            elif self.y - self.y0 >= t1 and self.y - self.y0 < t2:
-                s_ = 50 * np.abs(0.01*(gT-gt0)/(t2-t1))
-                gt = 0.01 * gt0 +\
-                    0.01 * (gT - gt0) / \
-                        (1+np.exp(\
-                            -s_*(self.y - self.y0 - t1 - (t2-t1)/2)))
-            else:
-                gt = 0.01 * gT
-            # adjust P2X fuel production
-            self.piP2X[self.y+1-self.y0] = min(5*gt,1)
-
-            # compute P2X fuel production
-            solar_actual = self.q['solar pv electricity'][self.y+1-self.y0]
-            wind_actual = self.q['wind electricity'][self.y+1-self.y0]
-            vre_total = solar_actual + wind_actual
-
-            self.q['P2X'][self.y+1-self.y0] = \
-                sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
-                            for s in self.sector]) + \
-                2 * psi * \
-                    vre_total * \
-                    min(self.piP2X[self.y+1-self.y0], 1)
-            #P2X产量 = 各部门直接需求 + 为吸收VRE间歇性而额外生产的P2X燃料
-            #这样可以模拟“VRE越多，P2X需求越大
-
-            # if self.y == 2099:
-            #     #print(self.y)
-            #     print('STEP9:P2x sector:',  sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
-            #                 for s in self.sector]))
-            #     print('STEP9:P2x reneable:',  2 * psi * \
-            #         vre_total * \
-            #         min(self.piP2X[self.y+1-self.y0], 1) )
+        """
+   
+        self.q[sl][self.y+1-self.y0] = \
+            max(0, self.elec[self.y+1-self.y0] - \
+                sum([self.q[t][self.y+1-self.y0] for t in \
+                    [self.technology[x] for x in \
+                        self.carrierInputs\
+                            [self.carrier.index('electricity')]] \
+                                if t != sl]))
+        """
 
 
+        # 0822 add step: recompute P2X based on actual solar and wind
 
-            
-            # 10 Calculate the quantity 
-            # of electrolyzers required for P2X fuel production
-            # compute electrolyzers
-            self.q['electrolyzers'][self.y+1-self.y0] = \
-                1/(24*365*0.5*0.7) * self.q['P2X'][self.y+1-self.y0]
+        # compute P2X fuel needs
+        gt0, gT, t1, t2, t3, psi = \
+                    self.EFgp['P2Xfuels','electricity']  
+        gt0 = 0
+        gT = 20
+        t1 = 13
+        t2 = t3
+        # compute growth rate
+        if self.y - self.y0 < t1:
+            gt = 0.01 * gt0
+        elif self.y - self.y0 >= t1 and self.y - self.y0 < t2:
+            s_ = 50 * np.abs(0.01*(gT-gt0)/(t2-t1))
+            gt = 0.01 * gt0 +\
+                0.01 * (gT - gt0) / \
+                    (1+np.exp(\
+                        -s_*(self.y - self.y0 - t1 - (t2-t1)/2)))
+        else:
+            gt = 0.01 * gT
+        # adjust P2X fuel production
+        self.piP2X[self.y+1-self.y0] = min(5*gt,1)
+
+        # compute P2X fuel production
+        solar_actual = self.q['solar pv electricity'][self.y+1-self.y0]
+        wind_actual = self.q['wind electricity'][self.y+1-self.y0]
+        vre_total = solar_actual + wind_actual
+
+        self.q['P2X'][self.y+1-self.y0] = \
+            sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
+                        for s in self.sector]) + \
+            2 * psi * \
+                vre_total * \
+                min(self.piP2X[self.y+1-self.y0], 1)
+         #P2X产量 = 各部门直接需求 + 为吸收VRE间歇性而额外生产的P2X燃料
+         #这样可以模拟“VRE越多，P2X需求越大
+
+        # if self.y == 2099:
+        #     #print(self.y)
+        #     print('STEP9:P2x sector:',  sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
+        #                 for s in self.sector]))
+        #     print('STEP9:P2x reneable:',  2 * psi * \
+        #         vre_total * \
+        #         min(self.piP2X[self.y+1-self.y0], 1) )
+
+
+
         
-        elif self.mode == 'policy':
-
-            #计算P2X产能约束
-            max_p2x_capacity = self.q['electrolyzers'][self.y+1-self.y0] * (24*365*0.5*0.7)
-            
-            # 优先满足部门直接需求
-            sector_p2x_demand = sum([self.EF['P2Xfuels',s][self.y+1-self.y0] 
-                                    for s in self.sector])
-            
-            if max_p2x_capacity >= sector_p2x_demand:
-                 # 产能充足，有剩余可用于VRE消纳
-                available_p2x_for_vre = max_p2x_capacity - sector_p2x_demand
-            else:
-                 # 产能不足，强制调整electrolyzer以满足部门需求
-                available_p2x_for_vre = 0
-                self.q['electrolyzers'][self.y+1-self.y0] = sector_p2x_demand / (24*365*0.5*0.7)
-
-            self.q['P2X'][self.y+1-self.y0] = max(sector_p2x_demand, max_p2x_capacity )
-                
-
-            
-            vre_total = self.q['solar pv electricity'][self.y+1-self.y0] + \
-                        self.q['wind electricity'][self.y+1-self.y0]
-             # 总VRE消纳需求（基于原来的psi参数）
-            gt0, gT, t1, t2, t3, psi = self.EFgp['P2Xfuels','electricity']
-            total_vre_absorption_need = 2 * psi * vre_total * min(self.piP2X[self.y+1-self.y0], 1)
-
-            # P2X承担的VRE消纳（在满足部门需求后）
-            p2x_vre_absorption = min(available_p2x_for_vre, total_vre_absorption_need)
-            
-            # Storage需要承担的剩余VRE消纳
-            remaining_vre_for_storage = max(0, total_vre_absorption_need - p2x_vre_absorption)
-            
-            self.q['multi-day storage'][self.y+1-self.y0] = remaining_vre_for_storage / 365
-    
-
-
+        # 10 Calculate the quantity 
+        # of electrolyzers required for P2X fuel production
+        # compute electrolyzers
+        self.q['electrolyzers'][self.y+1-self.y0] = \
+            1/(24*365*0.5*0.7) * self.q['P2X'][self.y+1-self.y0]
         
         #### compute costs
 

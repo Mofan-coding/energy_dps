@@ -5,7 +5,7 @@ import numpy as np
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '092601'
+label = '092801'
 scenario = 'fast transition'
 policy_path = f'results/{label}_{scenario}_policy.pth'
 nsim = 1

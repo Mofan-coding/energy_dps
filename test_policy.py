@@ -10,9 +10,9 @@ import seaborn as sns
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '062501'
+label = '062801'
 scenario = 'fast'
-nsim = 10  # Number of evaluation runs
+nsim = 100  # Number of evaluation runs
 savegif = True
 
 model = _energy_sim_model.EnergyModel(
