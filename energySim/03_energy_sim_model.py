@@ -11,10 +11,14 @@ import math
 
 
 ##### test 
-# 0928 02energy_sim_model
+# 1013 03energy_sim_model
 
-# let policy decide electrolyzer, and multi-stage and p2x together to meet VRE
-# use Way's stochastic Wright's Law
+# updated based on 0928 02energy_sim_model
+# use MEng's wrights law
+
+# W2: sample a learning rate each year for each simulation , no error term
+# W1: fixed learning rate, with error term
+
 
 # model class
 class EnergyModel:
@@ -773,8 +777,12 @@ class EnergyModel:
 
     # simulation
     def simulate(self):
+
+        for t in self.learningRateTechs:
+            self.omega[t] = self.costparams['omega'][t]
+
         
-        self.sample_uncertainties()
+        #self.sample_uncertainties()
         self.y = self.y0
         
         while self.y < self.yend:
@@ -857,6 +865,9 @@ class EnergyModel:
 
     # simulation step
     def step(self):
+
+        # 每年开始时采样新的学习率
+        #self.sample_uncertainties()
 
         # this is step 1 in Way et al. (2022) SM page 26
         # 1) Specify the quantity of useful energy 
@@ -1609,7 +1620,14 @@ class EnergyModel:
                                 np.log(self.z[t][self.y+1-self.y0] / \
                                         self.z[t][self.y-self.y0]) + \
                                 self.u[t][self.y+1-self.y0] + \
-                                    0.19 * self.u[t][self.y-self.y0]))                
+                                    0.19 * self.u[t][self.y-self.y0])) 
+
+                    # no error term
+                    # self.c[t][self.y+1-self.y0] = \
+                    #     np.exp((np.log(self.c[t][self.y-self.y0]) - \
+                    #             self.omega[t] * \
+                    #             np.log(self.z[t][self.y+1-self.y0] / \
+                    #                     self.z[t][self.y-self.y0])))       
 
 
 

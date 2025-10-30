@@ -8,7 +8,7 @@ import energySim._energy_sim_params as _energy_sim_params
 label = '092801'
 scenario = 'fast transition'
 policy_path = f'results/{label}_{scenario}_policy.pth'
-nsim = 1
+nsim = 20
 gt_clip = 1
 hidden_size = 2
 input_norm = False
@@ -27,12 +27,12 @@ model.mode = 'policy'
 model.policy.load(policy_path)
 
 all_inputs = []
-solar_inputs = []
+electrolyzer_inputs = []
 call_count = 0
 
 elec_techs = ['coal electricity', 'gas electricity', 'nuclear electricity', 
               'hydroelectricity', 'biopower electricity', 'wind electricity', 
-              'solar pv electricity'] 
+              'solar pv electricity', 'electrolyzer'] 
 
 orig_get_action = model.policy.get_action
 
@@ -41,38 +41,38 @@ def logging_get_action(pol_input):
     arr = np.asarray(pol_input, dtype=float)
     if np.all(np.isfinite(arr)) and arr.shape == (5,):
 
-        tech_idx = call_count % 7
+        tech_idx = call_count % 8
 
-        if tech_idx == 6: # solar 是第7个技术，索引为6
-            year = model.y0 + (call_count // 7)
+        if tech_idx == 7: # elecrrolzyer 索引
+            year = model.y0 + (call_count // 8)
 
-            gt = orig_get_action(pol_input)
+            gt_raw = orig_get_action(pol_input)
 
-            gt_final = gt
-            current_share = model.q['solar pv electricity'][year-model.y0] / model.elec[year-model.y0]
-        
-            if current_share > 1.0:
-
-                gt_final = min(gt, 0.0001)
-                print(gt_final)
-            
-
-            solar_inputs.append(arr.tolist())
-            print(f"Solar year {year}: inputs={arr}")
-            print(f"  Tech cost: {arr[0]:.3f}")
-            print(f"  Cum prod/10: {arr[1]:.3f}")
-            print(f"  Time progress: {arr[2]:.3f}")
-            print(f"  Supply-demand: {arr[3]:.3f}")
-            print(f"  Tech share: {arr[4]:.3f}")
-            
-            # 修复：处理 gt 可能是数组的情况
-            if isinstance(gt, np.ndarray):
-                if gt.size == 1:
-                    print(f"  Growth rate output: {gt.item():.3f}")
-                else:
-                    print(f"  Growth rate output: {gt}")
+            # 提取标量值
+            if isinstance(gt_raw, np.ndarray):
+                gt = gt_raw.item()  # 将(1,)数组转换为标量
             else:
-                print(f"  Growth rate output: {gt_final:.3f}")
+                gt = float(gt_raw)
+
+       
+            if year == 2090: 
+                # 获取当前electrolyzer容量
+                current_electrolyzer = model.q['electrolyzers'][model.y-model.y0]
+
+                #solar_inputs.append(arr.tolist())
+                print(f"year {year}: inputs={arr}")
+                print(f"  Tech cost: {arr[0]:.3f}")
+                # print(f"  Cum prod/10: {arr[1]:.3f}")
+                # print(f"  Time progress: {arr[2]:.3f}")
+                # print(f"  Supply-demand: {arr[3]:.3f}")
+                # print(f"  Tech share: {arr[4]:.3f}")
+                print(f"  Growth rate output: {gt:.3f}")
+   
+                
+                 # 计算下一年的electrolyzer容量
+                gt = min(1.0, gt)
+                next_electrolyzer = current_electrolyzer * (1 + gt)
+                print(f"  Next year electrolyzer capacity: {next_electrolyzer:.6f}")
 
         call_count +=1
 
@@ -84,10 +84,11 @@ model.policy.get_action = logging_get_action
 np.random.seed(0)
 for n in range(nsim):
     print(f"\n=== Simulation {n+1} ===")
+    call_count = 0 
     _ = model.simulate()
 
 all_inputs = np.asarray(all_inputs, dtype=float)  # [N, 5]
-solar_inputs = np.asarray(solar_inputs, dtype=float)
+#solar_inputs = np.asarray(solar_inputs, dtype=float)
 
 print("Collected samples:", all_inputs.shape)
 #rint(all_inputs)

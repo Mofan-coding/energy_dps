@@ -31,7 +31,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '092801'
+label = '092901'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -89,9 +89,6 @@ if simulate:
     print('start:',model.mode)
 
 
-
-
-
     np.random.seed(0)
 
     all_costs_exo = [] #total system cost
@@ -99,6 +96,10 @@ if simulate:
     all_c_exo = [] # unit cost time series
     all_omega_exo = [] # learning rate
     
+    all_C_exo = []        # 各技术的年度成本
+    all_totalCost_exo = [] # 年度总成本
+    all_gridInv_exo = []   # 电网投资成本
+    all_elec_exo = []      # 电力需求
     
     for n in range(nsim):
         # for each cost assumption, compute total costs
@@ -112,6 +113,11 @@ if simulate:
             all_q_exo.append(copy.deepcopy(model.q))
             all_c_exo.append(copy.deepcopy(model.c))
             all_omega_exo.append(copy.deepcopy(model.omega))  # 记录本次sample的learning rate参数
+
+            all_C_exo.append(copy.deepcopy(model.C))           # 各技术年度成本
+            all_totalCost_exo.append(copy.deepcopy(model.totalCost)) # 年度总成本
+            all_gridInv_exo.append(copy.deepcopy(model.gridInv))     # 电网成本  
+            all_elec_exo.append(copy.deepcopy(model.elec))           # 电力需求
 
 
 
@@ -127,10 +133,101 @@ if simulate:
             #     model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
             #     model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
             
-    # 找最低和最高cost索引
+    # # 找最低和最高cost索引
+
+    def print_detailed_cost_breakdown(idx, scenario_name, mode = 'policy'):
+        """
+            打印详细成本分解
+            
+            参数:
+            - idx: 要分析的索引
+            - scenario_name: 场景名称
+            - mode: 'policy' 或 'exo'，指定使用哪组数据
+        """
+        
+        print(f"\n=== {scenario_name} Detailed Cost Breakdown ===")
+        
+        if mode == 'policy':
+            all_C = all_C_policy
+            all_gridInv = all_gridInv_policy
+            all_totalCost = all_totalCost_policy
+            all_costs = all_costs_policy
+            all_elec = all_elec_policy
+            all_q = all_q_policy
+        elif mode == 'exo':
+            all_C = all_C_exo
+            all_gridInv = all_gridInv_exo
+            all_totalCost = all_totalCost_exo
+            all_costs = all_costs_exo
+            all_elec = all_elec_exo
+            all_q = all_q_exo
+    
+        # 各技术的总成本
+        print("Technology Costs (trillion USD):")
+        tech_costs = {}
+        total_tech_cost = 0
+        for tech in model.technology[:13]:  # 前13个是主要技术
+            tech_total_cost = sum(all_C[idx][tech]) * 1e-12  # 转换为trillion USD
+            tech_costs[tech] = tech_total_cost
+            total_tech_cost += tech_total_cost
+            print(f"  {tech}: {tech_total_cost:.3f}")
+        
+        # 电网成本
+        grid_total_cost = sum(all_gridInv[idx]) * 1e-3  # 从billion转为trillion USD
+        print(f"  Grid investment: {grid_total_cost:.3f}")
+        
+        # 总成本
+        system_total_cost = sum(all_totalCost[idx]) * 1e-12
+        print(f"\nTotal system cost: {system_total_cost:.3f} trillion USD")
+        print(f"NPV (discounted): {all_costs[idx]:.3f} trillion USD")
+        
+        # 检查是否有电力缺口惩罚
+        print(f"\n=== Electricity Balance Check ===")
+        penalty_found = False
+        overbuild_penalty_found = False
+
+    
+        for y in range(model.y0, model.yend+1):
+            elec_demand = all_elec[idx][y-model.y0]
+            elec_supply = sum([all_q[idx][model.technology[x]][y-model.y0] 
+                          for x in model.carrierInputs[model.carrier.index('electricity')]])
+            
+            deficit = max(0, elec_demand - elec_supply)
+
+            #检查underbuild penalty
+            if deficit > 0.1:  # 有明显缺口
+                penalty_cost = 10000 * 1/(1000/(60*60)) * 1e9 * deficit * 1e-12
+                print(f"Year {y}: Deficit={deficit:.2f} EJ, Penalty={penalty_cost:.3f} trillion USD")
+                penalty_found = True
+            
+                 
+            # 检查overbuild penalty
+            overbuild_ratio = elec_supply / (elec_demand + 1e-9)
+            if overbuild_ratio > 1.3:
+                excess_ratio = overbuild_ratio - 1.3
+                overbuild_penalty = 500 * 1/(1000/(60*60)) * 1e9 * \
+                                (excess_ratio**2) * elec_demand * 1e-12
+                print(f"Year {y}: Overbuild ratio={overbuild_ratio:.2f}, Overbuild Penalty={overbuild_penalty:.3f} trillion USD")
+                overbuild_penalty_found = True
+        
+        
+        if not penalty_found:
+            print("No significant electricity deficit penalties found.")
+    
+        if not overbuild_penalty_found:
+            print("No significant electricity overbuild penalties found.")
+            
+        return tech_costs
+
+    
     idx_min_exo = np.argmin(all_costs_exo)
     idx_max_exo = np.argmax(all_costs_exo)
     print('exo highest cost:',max(all_costs_exo))
+
+    #print_detailed_cost_breakdown(idx_min_exo, "Exo Lowest Cost")
+    print_detailed_cost_breakdown(idx_max_exo, "Exo Highest Cost", mode = 'exo')
+
+   
 
     # # # 找对应的learning rate参数
     # #omega_min_exo = all_omega_exo[idx_min_exo]
@@ -146,11 +243,11 @@ if simulate:
     
     
     # # # # 找到最高和最低solar learning rate 的索引
-    # # omega_solar = [omega['solar pv electricity'] for omega in all_omega_exo]
-    # # idx_min_exo = np.argmin(omega_solar)
-    # # idx_max_exo = np.argmax(omega_solar)
-    # # print('lowest lr exo:', min(omega_solar))
-    # # print('highest lr exo:', max(omega_solar))
+    # omega_solar = [omega['solar pv electricity'] for omega in all_omega_exo]
+    # idx_min_exo = np.argmin(omega_solar)
+    # idx_max_exo = np.argmax(omega_solar)
+    # print('lowest lr exo:', min(omega_solar))
+    # print('highest lr exo:', max(omega_solar))
     
 
     
@@ -186,7 +283,7 @@ if simulate:
         # and append it to the dictionary
         # 1e-12 is used to convert from USD to trillion USD
         for l in labels:
-            print("simulating...",n)
+            #print("simulating...",n)
             #tcosts[l+' - decision rule'][scenario].append( 1e-12 * model.simulate())
             cost = 1e-12 * model.simulate()
             tcosts[l+' - decision rule'][scenario].append(cost)
@@ -215,70 +312,19 @@ if simulate:
             #     all_shares.append(shares_df)
     
     
-    def print_detailed_cost_breakdown(idx, scenario_name):
-        print(f"\n=== {scenario_name} Detailed Cost Breakdown ===")
-        
-        # 各技术的总成本
-        print("Technology Costs (trillion USD):")
-        tech_costs = {}
-        total_tech_cost = 0
-        for tech in model.technology[:13]:  # 前13个是主要技术
-            tech_total_cost = sum(all_C_policy[idx][tech]) * 1e-12  # 转换为trillion USD
-            tech_costs[tech] = tech_total_cost
-            total_tech_cost += tech_total_cost
-            print(f"  {tech}: {tech_total_cost:.3f}")
-        
-        # 电网成本
-        grid_total_cost = sum(all_gridInv_policy[idx]) * 1e-3  # 从billion转为trillion USD
-        print(f"  Grid investment: {grid_total_cost:.3f}")
-        
-        # 总成本
-        system_total_cost = sum(all_totalCost_policy[idx]) * 1e-12
-        print(f"\nTotal system cost: {system_total_cost:.3f} trillion USD")
-        print(f"NPV (discounted): {all_costs_policy[idx]:.3f} trillion USD")
-        
-        # 检查是否有电力缺口惩罚
-        print(f"\n=== Electricity Balance Check ===")
-        penalty_found = False
-        overbuild_penalty_found = False
-
     
-        for y in range(model.y0, model.yend+1):
-            elec_demand = all_elec_policy[idx][y-model.y0]
-            elec_supply = sum([all_q_policy[idx][model.technology[x]][y-model.y0] 
-                          for x in model.carrierInputs[model.carrier.index('electricity')]])
-            
-            deficit = max(0, elec_demand - elec_supply)
-
-            #检查underbuild penalty
-            if deficit > 0.1:  # 有明显缺口
-                penalty_cost = 10000 * 1/(1000/(60*60)) * 1e9 * deficit * 1e-12
-                print(f"Year {y}: Deficit={deficit:.2f} EJ, Penalty={penalty_cost:.3f} trillion USD")
-                penalty_found = True
-            
-                 
-            # 检查overbuild penalty
-            overbuild_ratio = elec_supply / (elec_demand + 1e-9)
-            if overbuild_ratio > 1.3:
-                excess_ratio = overbuild_ratio - 1.3
-                overbuild_penalty = 500 * 1/(1000/(60*60)) * 1e9 * \
-                                (excess_ratio**2) * elec_demand * 1e-12
-                print(f"Year {y}: Overbuild ratio={overbuild_ratio:.2f}, Overbuild Penalty={overbuild_penalty:.3f} trillion USD")
-                overbuild_penalty_found = True
-        
-        
-        if not penalty_found:
-            print("No significant electricity deficit penalties found.")
     
-        if not overbuild_penalty_found:
-            print("No significant electricity overbuild penalties found.")
-            
-        return tech_costs
+
+
+
 
     #找到最高和最低cost 索引
     
     idx_min_policy = np.argmin(all_costs_policy)
     idx_max_policy = np.argmax(all_costs_policy)
+    idx_med_policy = np.argmin(np.abs(np.array(all_costs_policy) - np.median(all_costs_policy)))
+
+
 
     print('policy highest cost:', max(all_costs_policy))
     # 分析最高和最低成本scenario
@@ -288,9 +334,9 @@ if simulate:
    
 
   
-    # # # 找到85和15 percentile cost 索引
-    # p15 = np.percentile(all_costs_policy, 5)
-    # p85 = np.percentile(all_costs_policy, 95)
+    # # # # 找到85和15 percentile cost 索引
+    # p15 = np.percentile(all_costs_policy, 15)
+    # p85 = np.percentile(all_costs_policy, 85)
     # idx_min_policy = np.argmin(np.abs(np.array(all_costs_policy) - p15))
     # idx_max_policy = np.argmin(np.abs(np.array(all_costs_policy) - p85))        
  
@@ -313,6 +359,50 @@ if simulate:
 
 
 
+    def plot_tech_comparison(data_list, indices, tech, label, title, name=None, 
+                        ylabel='Value', legend_labels=None):
+        """
+        绘制指定技术在不同索引下的时间序列对比图
+        
+        参数:
+        - data_list: 包含所有仿真结果的列表 (如 all_c_policy 或 all_q_policy)
+        - indices: 要对比的索引列表 (如 [idx_min_policy, idx_max_policy])
+        - tech: 技术名称 (如 'solar pv electricity')
+        - label: 保存文件的标签
+        - title: 图表标题
+        - name: 保存文件名 (如果为None则显示图表)
+        - ylabel: y轴标签 (默认为 'Value')
+        - legend_labels: 图例标签列表 (如果为None则使用默认标签)
+        """
+        years = range(model.y0, model.yend + 1)
+        fig = plt.figure(figsize=(10, 6))
+        
+        # 如果没有提供图例标签，使用默认标签
+        if legend_labels is None:
+            legend_labels = [f'Index {i}' for i in indices]
+        
+        # 为每个索引绘制线条
+        colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray']
+        
+        for i, (idx, legend_label) in enumerate(zip(indices, legend_labels)):
+            color = colors[i % len(colors)]
+            tech_data = data_list[idx][tech]
+            plt.plot(years, tech_data, label=legend_label, color=color, linewidth=2)
+        
+        plt.xlabel('Year')
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        
+        if name:
+            save_dir = f'results/figures/{label}'
+            os.makedirs(save_dir, exist_ok=True)
+            fig.savefig(f'{save_dir}/{name}.png', dpi=300, bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
 
     def plot_final_energy_by_source(q_dict, label, title, name=None):
         colors = ['black','saddlebrown','darkgray',
@@ -415,10 +505,58 @@ if simulate:
         else:
             plt.show()
     
+
+    def plot_tech_comparison(data_list, indices, tech, label, title, name=None, 
+                        ylabel='Value', legend_labels=None):
+        """
+        绘制指定技术在不同索引下的时间序列对比图
+        
+        参数:
+        - data_list: 包含所有仿真结果的列表 (如 all_c_policy 或 all_q_policy)
+        - indices: 要对比的索引列表 (如 [idx_min_policy, idx_max_policy])
+        - tech: 技术名称 (如 'solar pv electricity')
+        - label: 保存文件的标签
+        - title: 图表标题
+        - name: 保存文件名 (如果为None则显示图表)
+        - ylabel: y轴标签 (默认为 'Value')
+        - legend_labels: 图例标签列表 (如果为None则使用默认标签)
+        """
+        years = range(model.y0, model.yend + 1)
+        fig = plt.figure(figsize=(10, 6))
+        
+        # 如果没有提供图例标签，使用默认标签
+        if legend_labels is None:
+            legend_labels = [f'Index {i}' for i in indices]
+        
+        # 为每个索引绘制线条
+        colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray']
+        
+        for i, (idx, legend_label) in enumerate(zip(indices, legend_labels)):
+            color = colors[i % len(colors)]
+            tech_data = data_list[idx][tech]
+            plt.plot(years, tech_data, label=legend_label, color=color, linewidth=2)
+        
+        plt.xlabel('Year')
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        
+        if name:
+            save_dir = f'results/figures/{label}'
+            os.makedirs(save_dir, exist_ok=True)
+            fig.savefig(f'{save_dir}/{name}.png', dpi=300, bbox_inches='tight')
+            plt.close(fig)
+        else:
+            plt.show()
+    
+    
+    
         
     # # --- 画最低和最高 cost 的轨迹并保存 ---
 
-    # #### ------ Exogenous
+    #### ------ Exogenous
 
   
     plot_final_energy_by_source(all_q_exo[idx_min_exo], label, "Exogenous: Final Energy (Lowest Cost)", name="exo_lowest_final_energy")
@@ -441,6 +579,39 @@ if simulate:
     plot_all_tech_costs(all_c_policy[idx_max_policy], label, "Policy: All Tech Costs (Highest Cost)", name="policy_highest_all_tech_costs")
     plot_q_vs_time(all_q_policy[idx_max_policy], label, "Policy: q vs Time (Highest Cost)", name="policy_highest_q_vs_time")
     
+
+    # # --- 画指定技术在不同索引下的时间序列对比图 ---
+
+    # ## highest, median, lowest 
+    # plot_tech_comparison(
+    #     data_list = all_c_policy,
+    #     indices=[idx_min_policy, idx_med_policy, idx_max_policy],
+    #     tech='multi-day storage',
+    #     label=label,
+    #     title='Policy: multi-day storage Cost Comparison',
+    #     name='policy_multi-day_storage_cost_comparison',
+    #     ylabel='Unit Cost (USD/GJ)',
+    #     legend_labels=['Lowest Total Cost', 'Median Total Cost', 'Highest Total Cost']
+    # )
+
+    # techs_to_plot = ['solar pv electricity', 'electrolyzers', 'wind electricity', 'multi-day storage']
+ 
+    # for tech in techs_to_plot:
+    #     # 生成适合的title和name
+    #     tech_display = tech.replace('electricity', 'elec').replace(' ', '_')
+    #     title = f'Policy: {tech.title()} Capacity Comparison'
+    #     name = f'policy_{tech_display}_Capacity_comparison'
+        
+    #     plot_tech_comparison(
+    #         data_list=all_q_policy,
+    #         indices=[idx_min_policy, idx_max_policy], #idx_med_policy, 
+    #         tech=tech,
+    #         label=label,
+    #         title=title,
+    #         name=name,
+    #         ylabel= 'Capacity (EJ)',  #'Unit Cost (USD/GJ)',
+    #         legend_labels=['Lowest Solar Learning Rate', 'Highest Solar Learning Rate']
+    #     )
 
 
     

@@ -26,7 +26,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '092801'
+label = '092901'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -34,9 +34,9 @@ hidden_size = 2
 input_norm = False
 
 
-savegif = False #individual simulation dynamics 
-savebox= True # boxplot of costs 
-save_sharebox = False  #Boxplot of End-of-Century Generation Share
+savegif = True #individual simulation dynamics 
+savebox= False # boxplot of costs 
+save_sharebox = True  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
 
@@ -93,6 +93,8 @@ if simulate:
     
         model.mode = 'exogenous'
         np.random.seed(0)
+
+        all_shares_exo = []
         
         print('start:', model.mode)
         for n in range(nsim):
@@ -105,7 +107,7 @@ if simulate:
                 #print("simulating...",n)
                 tcosts[l][scenario].append( 1e-12 * model.simulate())
                 if scenario == sim_scenario and savegif:
-                    print("saving the figure...")
+                    #print("saving the figure...")
                     #model.make_gif(f'static_{scenario.replace(" ", "_")}_{n}')
                     
                     #model.plotFinalEnergyBySource(label,filename=f'{n}_static_area_{scenario.replace(" ", "_")}_{n}')
@@ -114,11 +116,14 @@ if simulate:
                     #model.plotIndividualTechAreas(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotCapacityExpansion(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotNewBuildsAndRetirements(filename=f'static_area_{scenario.replace(" ", "_")}_{n}')
-    
+                    shares_df = model.get_generation_shares()
+                    #print(shares_df)
+                    all_shares_exo.append(shares_df)
         
       
         # set policy mode
         model.mode = 'policy'
+        print('start:', model.mode)
 
         # load policy file
         #model.policy.load('energySim' + os.path.sep + 'fast_transition_policy_new.pth')
@@ -126,7 +131,7 @@ if simulate:
         model.policy.load(policy_path)
         # run multiple iterations to explore cost parameters' uncertainty
         np.random.seed(0)
-        all_shares = []
+        all_shares_pol = []
         for n in range(nsim):
             # for each cost assumption, compute total costs
             # and append it to the dictionary
@@ -146,8 +151,8 @@ if simulate:
                     #model.plotCapacityExpansion(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     #model.plotNewBuildsAndRetirements(filename=f'dynamic_area_{scenario.replace(" ", "_")}_{n}')
                     shares_df = model.get_generation_shares()
-                    #print(shares_df)
-                    all_shares.append(shares_df)
+                    #print('policy share', shares_df)
+                    all_shares_pol.append(shares_df)
     
      
 
@@ -160,51 +165,108 @@ if simulate:
                 ## make share boxplot (end-of-century share for each tech, all simulations)
                 #only for policy model: since exogenous, same energy transition pathway
 
-                # Get the last year from each simulation
-                last_year = model.yend
-                
-                box_data = pd.DataFrame([df.loc[last_year] for df in all_shares])
-                techs = box_data.columns.tolist()
+                # modes = ['exogenous', 'policy']
+                # for mode in modes:
+                #     if mode == 'exogenous':
+                #         all_shares = all_shares_exo
+                #     else:
+                #         all_shares = all_shares_pol
+                 
+        
+                    
+                years = [2030, 2050,2070]
+                for plot_year in years:
+                    
+                    print(plot_year)
+                    #plot_year = 2030
+                    #last_year = model.yend
 
-                colors = ['black','saddlebrown','darkgray',
-                        'saddlebrown','darkgray',
-                        'magenta','royalblue',
-                        'forestgreen','deepskyblue',
-                        'orange','pink','plum','lawngreen', 'burlywood']
-                
-                plt.figure(figsize=(14,6))
-                box = plt.boxplot([box_data[t] for t in techs], patch_artist=True, labels=techs)
-                for patch, color in zip(box['boxes'], colors):
-                    patch.set_facecolor(color)
-                plt.ylabel('Share of Final Energy in 2100')
-                plt.xlabel('Technology')
-                plt.title('Distribution of End-of-Century Generation Share by Technology')
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                #plt.savefig('./figures/end_century_share_boxplot.png')
-                
-                plt.savefig(f'results/figures/{label}/end_century_share_boxplot.png')
-           
-                plt.show()
+                    # 准备policy的boxplot数据
+                    policy_box_data = pd.DataFrame([df.loc[plot_year] for df in all_shares_pol])
+                    techs = policy_box_data.columns.tolist()
+                    
+                    # 准备exogenous的线条数据（取第一个simulation，因为exogenous都一样）
+                    exo_line_data = all_shares_exo[0].loc[plot_year]
+            
+                    # box_data = pd.DataFrame([df.loc[plot_year] for df in all_shares])
+                    # techs = box_data.columns.tolist()
 
-                # plot mid century share
+                    colors = ['black','saddlebrown','darkgray',
+                            'saddlebrown','darkgray',
+                            'magenta','royalblue',
+                            'forestgreen','deepskyblue',
+                            'orange','pink','plum','lawngreen', 'burlywood']
+                    
+                    #plt.figure(figsize=(14,6))
+
+                    fig, ax = plt.subplots(figsize=(14, 6))
+                     # 绘制policy的boxplot
+                    box = ax.boxplot([policy_box_data[t] for t in techs], 
+                                    patch_artist=True, 
+                                    labels=techs,
+                                    positions=range(1, len(techs) + 1))
+                    
+                    # 设置boxplot颜色
+                    for patch, color in zip(box['boxes'], colors):
+                        patch.set_facecolor(color)
+                        patch.set_alpha(0.7)  # 设置透明度以便看到线条
+                    
+                    # 绘制exogenous的黑色粗线
+                    x_positions = range(1, len(techs) + 1)
+                    exo_values = [exo_line_data[tech] for tech in techs]
+                    ax.scatter(x_positions, exo_values, 
+                            color='black', 
+                            s=100,  # 点的大小
+                            marker='o',  
+                            label='Exogenous',
+                            zorder=10)  # 确保点在最上层
+                    x_positions = range(1, len(techs) + 1)
+                 
+
+                    ax.set_ylabel(f'Share of Final Energy in {plot_year}')
+                    ax.set_xlabel('Technology')
+                    ax.set_title(f'Comparison: Exogenous vs Policy Generation Share in {plot_year}')
+                    ax.tick_params(axis='x', rotation=45)
+                    
+                    # 添加图例
+                    ax.legend(loc='upper right')
+                    
+                    plt.tight_layout()
+                    plt.savefig(f'results/figures/{label}/comparison_{plot_year}_share_boxplot.png')
+                    plt.show()
+                    # box = plt.boxplot([box_data[t] for t in techs], patch_artist=True, labels=techs)
+                    # for patch, color in zip(box['boxes'], colors):
+                    #     patch.set_facecolor(color)
+                    # plt.ylabel(f'Share of Final Energy in {plot_year}')
+                    # plt.xlabel('Technology')
+                    # plt.title(f'{mode}: Distribution of Year {plot_year} Generation Share by Technology')
+                    # plt.xticks(rotation=45)
+                    # plt.tight_layout()
+                    # #plt.savefig('./figures/end_century_share_boxplot.png')
+                    
+                    # plt.savefig(f'results/figures/{label}/{mode}_{plot_year}_share_boxplot.png')
+            
+                    # plt.show()
+
+
+                # # plot mid century share
          
-                mid_year = 2050
-                box_data = pd.DataFrame([df.loc[mid_year] for df in all_shares])
-                techs = box_data.columns.tolist()
+                # mid_year = 2050
+                # box_data = pd.DataFrame([df.loc[mid_year] for df in all_shares])
+                # techs = box_data.columns.tolist()
 
                 
-                plt.figure(figsize=(14,6))
-                box = plt.boxplot([box_data[t] for t in techs], patch_artist=True, labels=techs)
-                for patch, color in zip(box['boxes'], colors):
-                    patch.set_facecolor(color)
-                plt.ylabel('Share of Final Energy in 2050')
-                plt.xlabel('Technology')
-                plt.title('Distribution of Mid-of-Century Generation Share by Technology ')
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                plt.savefig(f'results/figures/{label}/mid_century_share_boxplot.png')
-                plt.show()
+                # plt.figure(figsize=(14,6))
+                # box = plt.boxplot([box_data[t] for t in techs], patch_artist=True, labels=techs)
+                # for patch, color in zip(box['boxes'], colors):
+                #     patch.set_facecolor(color)
+                # plt.ylabel('Share of Final Energy in 2050')
+                # plt.xlabel('Technology')
+                # plt.title('Distribution of Mid-of-Century Generation Share by Technology ')
+                # plt.xticks(rotation=45)
+                # plt.tight_layout()
+                # plt.savefig(f'results/figures/{label}/mid_century_share_boxplot.png')
+                # plt.show()
           
           
             if save_pc:
@@ -274,6 +336,7 @@ if savebox:
                         gap = 0.2,
                         **{'showfliers':False}) # false: 不显示极端值
 
+    #ax.set_ylim(bottom = 0)
     ax.set_xlabel('')
 
     # set x-axis labels
@@ -322,7 +385,7 @@ if savebox:
 
     save_dir = f"./results/figures/{label}"
     os.makedirs(save_dir, exist_ok=True)
-    fig.savefig(f"{save_dir}/no_outlier_total_discounted_costs.pdf")   
+    fig.savefig(f"{save_dir}/validation_W1_no_outlier_total_discounted_costs.pdf")   
 
     #fig.savefig(f"./results/figures/total_discounted_costs.pdf")
 
