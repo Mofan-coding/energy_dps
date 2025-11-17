@@ -26,7 +26,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '092901'
+label = '103001'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -34,9 +34,9 @@ hidden_size = 2
 input_norm = False
 
 
-savegif = True #individual simulation dynamics 
-savebox= False # boxplot of costs 
-save_sharebox = True  #Boxplot of End-of-Century Generation Share
+savegif = False #individual simulation dynamics 
+savebox= True # boxplot of costs 
+save_sharebox = False  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
 

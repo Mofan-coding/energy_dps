@@ -5,16 +5,13 @@ import scipy, copy
 import energySim._policy as Policy
 import matplotlib.animation as animation
 import math
-from scipy.optimize import linprog
 
 
 
 
 
 ##### test 
-# 1114 05energy_sim_model
-
-# add new technology: SMR! 
+# 0928 02energy_sim_model
 
 # let policy decide electrolyzer, and multi-stage and p2x together to meet VRE
 # use Way's stochastic Wright's Law
@@ -39,16 +36,9 @@ class EnergyModel:
               'gas (direct use)','coal electricity',
               'gas electricity','nuclear electricity',
               'hydroelectricity','biopower electricity',
-              'wind electricity','solar pv electricity','SMR electricity',
+              'wind electricity','solar pv electricity',
               'daily batteries','multi-day storage',
               'electrolyzers','electricity networks', 'P2X']
-        
-        self.elec_gen_techs = [
-            'coal electricity','gas electricity','nuclear electricity',
-            'hydroelectricity','biopower electricity',
-            'wind electricity','solar pv electricity','SMR electricity'
-        ]
-
         self.carrier = ['oil','coal','gas','electricity','P2Xfuels']
         self.sector = ['transport', 'industry', 'buildings', 'energy']
 
@@ -205,9 +195,6 @@ class EnergyModel:
         self.q['P2X'][0] = 3 * 2.95e-4
         self.q['qgrid'][0] = 0.17/1000
         self.q['qtransport'][0] = 2.06/1000
-        # idx2030 = 2030 - self.y0
-        # self.q['SMR electricity'][idx2030] = 0.058
-
 
         # this array is used to represent phase in of P2X fuels
         self.piP2X = np.zeros(self.yend - self.y0 + 1)
@@ -231,7 +218,7 @@ class EnergyModel:
         self.costparams = costparams
 
         # set learning rate technologies
-        self.learningRateTechs = self.technology[5:14]
+        self.learningRateTechs = self.technology[5:13]
 
         # initialize cost dictionaries
         self.gridInv = np.zeros(self.yend - self.y0 + 1)
@@ -242,7 +229,7 @@ class EnergyModel:
         for t in self.technology:
             self.C[t] = np.zeros(self.yend - self.y0 + 1)
 
-        #self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][self.y - self.y0], 1e-9))   # Init ema of electrolyzer unit cost 
+        self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][self.y - self.y0], 1e-9))   # Init ema of electrolyzer unit cost 
 
         #initialize unit cost and cumulative production dictionaries
         self.u = {}
@@ -250,7 +237,7 @@ class EnergyModel:
         self.omega = {}
 
         # for each technology
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
         
             #initialize production and unit cost arrays and 
             self.z[t] = np.zeros(self.yend - self.y0 + 1)
@@ -266,7 +253,6 @@ class EnergyModel:
                 self.z[t][0] = self.costparams['z0'][t]
             except KeyError:
                 self.z[t][0] = 0.0
-        #self.z['SMR electricity'][idx2030] = 0.058
 
         self.sample_uncertainties()
         
@@ -282,7 +268,7 @@ class EnergyModel:
 
     def sample_uncertainties(self):
 
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
 
             self.omega[t] = 0.0
 
@@ -795,7 +781,7 @@ class EnergyModel:
             self.step()
 
         # compute total cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
             for y in range(self.y0, self.yend+1):
                 if t not in self.learningRateTechs:
                     self.C[t][y-self.y0] = \
@@ -816,23 +802,43 @@ class EnergyModel:
                                     for tau in range(self.y0, y+1)])
 
         # adding grid costs (which are in billion USD)
-        self.C[self.technology[14]] = self.gridInv * 1e9                
+        self.C[self.technology[13]] = self.gridInv * 1e9                
 
         # compute total cost
         self.totalCost = np.zeros(self.yend - self.y0 + 1)
         for y in range(self.y0, self.yend+1):
-            for t in self.technology[:15]:
+            for t in self.technology[:14]:
                 self.totalCost[y-self.y0] += self.C[t][y-self.y0]
             # check if there is any demand deficitf
-            total_elec_supply = sum(self.q[t][y-self.y0] for t in self.elec_gen_techs)
-            if total_elec_supply < self.elec[y-self.y0] - 1e-1:
-
+            if sum([self.q[self.technology[x]][y-self.y0]  \
+                    for x in self.carrierInputs\
+                        [self.carrier.index('electricity')]]) < \
+                                self.elec[y-self.y0] - 1e-1:
                 ## using a value of lost load of 10000 USD/MWh 
                 ## equivalent to 10000 1e9 USD/ 1e9 MWh
                 ## equivalent to 10000 bln USD/PWh
                 self.totalCost[y-self.y0] += 10000 * 1/(1000/(60*60)) * \
-                    1e9 * max(0, self.elec[y-self.y0] - total_elec_supply)
+                    1e9 * max(0, self.elec[y-self.y0] - \
+                            sum([self.q[self.technology[x]][y-self.y0]  \
+                                    for x in self.carrierInputs\
+                                    [self.carrier.index('electricity')]]))
             
+            # ## 新增：Overbuild penalty - 允许30%余量
+            # total_elec_supply = sum([self.q[self.technology[x]][y-self.y0]  \
+            #                         for x in self.carrierInputs\
+            #                         [self.carrier.index('electricity')]])
+            # elec_demand = self.elec[y-self.y0]
+            # overbuild_ratio = total_elec_supply / (elec_demand + 1e-9)  # 避免除零
+            # if overbuild_ratio > 1.3:  # 超过30%余量开始惩罚
+            # # 温和的二次惩罚，比underbuild penalty轻
+            #     excess_ratio = overbuild_ratio - 1.3
+            #     ## using overbuild penalty of 500 USD/MWh (much lighter than underbuild)
+            #     ## with quadratic scaling based on excess ratio
+            #     overbuild_penalty = 500 * 1/(1000/(60*60)) * 1e9 * \
+            #                     (excess_ratio**2) * elec_demand
+            #     self.totalCost[y-self.y0] += overbuild_penalty
+
+
 
         # compute discounted cost
         # discount rate is sate to be 2% (0.02) 
@@ -1077,7 +1083,6 @@ class EnergyModel:
 
             techs = [self.technology[x] for x in self.carrierInputs[self.carrier.index('electricity')]]
             techs.append('electrolyzers')
-            techs.append('SMR electricity')
 
             for t in techs:
 
@@ -1089,36 +1094,89 @@ class EnergyModel:
                 # 4) growth of electricity
                 # 5) time
 
+                # decide every 5 year 
+                """
                
+                if t not in self.policy_cache or (self.y - self.y0) % 5 == 0:
+                    if self.y == self.y0:
+                        pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                                        np.log10(self.z[t][self.y-self.y0])/10,
+                                        (self.y-self.y0)/(self.yend-self.y0),
+                                        10*(sum([self.q[self.technology[x]][self.y-self.y0] \
+                                                for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                                                    self.elec[self.y-self.y0] - 1),
+                                        self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                        ]
+                    else:
+                        pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                                        np.log10(self.z[t][self.y-self.y0])/10,
+                                        (self.y-self.y0)/(self.yend-self.y0),
+                                        10*((sum([self.q[self.technology[x]][self.y-self.y0] \
+                                                for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                                                    self.elec[self.y-self.y0] - 1)),
+                                        self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                        ]
+
+
+                    ## linear policy
+                    gt = self.policy.get_action(pol_input)
+                    gt = min(1.0, gt)
+                    self.policy_cache[t] = (self.y, gt)
+                else:
+                    gt = self.policy_cache[t][1]
+                
+                """
 
                 # decide every year 
-                year_idx = self.y - self.y0
-                 # SMR 只允许 2030 年起上线：
-                if t == 'SMR electricity':
-                    # 本年决策写入下一年格子：q[t][year_idx+1]
-                    # 因此在 2020..2028 年（self.y <= 2028）把下一年置 0
-                    if self.y <= 2028:
-                        if year_idx + 1 < len(self.q[t]):
-                            self.q[t][year_idx + 1] = 0.0
-                        continue
-                    # 在 2029 年，直接写入 2030 年的起始值 0.058，不调用 policy
-                    if self.y == 2029:
-                        if year_idx + 1 < len(self.q[t]):
-                            self.q[t][year_idx + 1] = 0.058
-                        continue
 
-                pol_input = [np.log10(self.c[t][self.y-self.y0]),
-                                np.log10(self.z[t][self.y-self.y0])/10,
-                                (self.y-self.y0)/(self.yend-self.y0),
-                                10*((sum(self.q[t_][self.y-self.y0] for t_ in self.elec_gen_techs) / self.elec[self.y-self.y0] - 1)),
-                                # 10*((sum([self.q[self.technology[x]][self.y-self.y0] \
-                                #     for x in self.carrierInputs[self.carrier.index('electricity')]])/\
-                                #     self.elec[self.y-self.y0] - 1)),
-                                self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
-                                #np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
-                                ]
+              
+                if self.y == self.y0:
+                    pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                                    np.log10(self.z[t][self.y-self.y0])/10,
+                                    (self.y-self.y0)/(self.yend-self.y0),
+                                    10*(sum([self.q[self.technology[x]][self.y-self.y0] \
+                                            for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                                                self.elec[self.y-self.y0] - 1),
+                                    self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                    #np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
+                                    ]
+                else:
+                    
+                    pol_input = [np.log10(self.c[t][self.y-self.y0]),
+                                    np.log10(self.z[t][self.y-self.y0])/10,
+                                    (self.y-self.y0)/(self.yend-self.y0),
+                                  10*((sum([self.q[self.technology[x]][self.y-self.y0] \
+                                      for x in self.carrierInputs[self.carrier.index('electricity')]])/\
+                                       self.elec[self.y-self.y0] - 1)),
+                                    self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
+                                    #np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
+                                  ]
 
-                
+                # idx = self.y - self.y0
+                # log_c_t = np.log10(max(self.c[t][idx], 1e-9))
+                # log_z_t = np.log10(max(self.z[t][idx], 1e-9)) / 10.0
+                # time_feat = (self.y - self.y0) / (self.yend - self.y0)
+                # elec_share_sum = sum(self.q[self.technology[x]][idx]
+                #                     for x in self.carrierInputs[self.carrier.index('electricity')])
+                # grid_balance = 10.0 * (elec_share_sum / self.elec[idx] - 1.0)
+                # tech_share = self.q[t][idx] / self.elec[idx]
+
+                # if self.y > self.y0:
+
+                #     #self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][idx], 1e-9)) #without smoothing
+                #     self.ema_electrolyzer = 0.8 * self.ema_electrolyzer + \
+                #         0.2 * np.log10(max(self.c['electrolyzers'][idx], 1e-9))
+
+
+                # pol_input = [
+                #     log_c_t,
+                #     log_z_t,
+                #     time_feat,
+                #     grid_balance,
+                #     tech_share,
+                #     self.ema_electrolyzer,  # 平滑后的电解槽成本
+                # ]
+
                 
                 
                 #归一化
@@ -1138,6 +1196,58 @@ class EnergyModel:
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 gt = min(1.0, gt)
+
+                # # add emerfency brack
+                # if t == 'solar pv electricity':
+
+                #     current_share = self.q[t][self.y-self.y0]/self.elec[self.y-self.y0]
+                #     if current_share > 1.0:
+                #         gt = min(gt, 0.0001)
+
+             
+                #gt_max = self.gt_clip
+                #gt = min(gt_max, max(gt_max,gt))  # clip gt
+                #gt = gt_max * gt
+                #print(t,gt)
+                #print('gt:', gt)
+                #if t == 'solar pv electricity':
+                    #print(self.y, gt)
+                
+                
+            
+
+
+                # try:
+                #     pols_inputs = pd.read_csv('pols_inputs.csv')
+                #     pols_inputs.loc[pols_inputs.shape[0]] = [*pol_input,gt[0]]
+                #     pols_inputs.to_csv('pols_inputs.csv', index=False)
+                # except FileNotFoundError:
+                #     pols_inputs = pd.DataFrame([[*pol_input,gt[0]]], 
+                #                             columns=['c', 'z', 'elec','gt'],
+                #                             index=None)
+                #     pols_inputs.to_csv('pols_inputs.csv', index=False)
+
+                # compute generation from technology
+
+                # --- add cap logic as in exogenous --
+
+                # get growth rate parameters
+
+                """
+                try:
+                    gt0, gT, t1, t2, t3, psi = self.EFgp[t,'electricity']
+                # if growth parameters not available, 
+                # consider no useful energy from that carrier
+                except KeyError:
+                    self.q[t][self.y+1-self.y0] = 0.0
+                    continue
+                if self.y - self.y0 > t3:
+                    maxcap = psi * self.elec[self.y+1-self.y0]
+                else:
+                    maxcap = self.elec[self.y+1-self.y0]
+                
+                """
+
                 qp = self.q[t][self.y-self.y0]
                 qf = qp * (1 + gt)
                 #qf = min(qp * (1 + gt), maxcap)  # if want to add generation cap for tech
@@ -1406,7 +1516,7 @@ class EnergyModel:
             #             sum(self.Q[t][self.y-self.y0])
 
         # compute unit cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
 
             # update cumulative production
             self.z[t][self.y+1-self.y0] = \
@@ -1570,7 +1680,7 @@ class EnergyModel:
         # compute unit cost of technologies
 
         # for each technology
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
                 
             # iterate over the years
             for y in range(self.y0, self.yend):
@@ -1700,7 +1810,7 @@ class EnergyModel:
                                         0.19 * self.u[t][y-self.y0]))
 
         # compute total cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
             for y in range(self.y0, self.yend+1):
                 if t not in self.learningRateTechs:
                     self.C[t][y-self.y0] = \
@@ -1721,12 +1831,12 @@ class EnergyModel:
                                     for tau in range(self.y0, y+1)])
 
         # adding grid costs (which are in billion USD)
-        self.C[self.technology[14]] = self.gridInv * 1e9
+        self.C[self.technology[13]] = self.gridInv * 1e9
 
         # compute total cost
         self.totalCost = np.zeros(self.yend - self.y0 + 1)
         for y in range(self.y0, self.yend+1):
-            for t in self.technology[:15]:
+            for t in self.technology[:14]:
                 self.totalCost[y-self.y0] += self.C[t][y-self.y0]
 
         # compute discounted cost

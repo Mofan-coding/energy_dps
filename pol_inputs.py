@@ -5,10 +5,10 @@ import numpy as np
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '092801'
+label = '092901'
 scenario = 'fast transition'
 policy_path = f'results/{label}_{scenario}_policy.pth'
-nsim = 20
+nsim = 100
 gt_clip = 1
 hidden_size = 2
 input_norm = False
@@ -90,7 +90,7 @@ for n in range(nsim):
 all_inputs = np.asarray(all_inputs, dtype=float)  # [N, 5]
 #solar_inputs = np.asarray(solar_inputs, dtype=float)
 
-print("Collected samples:", all_inputs.shape)
+#print("Collected samples:", all_inputs.shape)
 #rint(all_inputs)
 
 # # 可选：winsorize 1% 极值，避免尾部拉坏尺度

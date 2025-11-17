@@ -12,9 +12,9 @@ from scipy.optimize import linprog
 
 
 ##### test 
-# 1114 05energy_sim_model
+# 1102 LP energy_sim_model
 
-# add new technology: SMR! 
+# deterministic optimization; use LP every step! 
 
 # let policy decide electrolyzer, and multi-stage and p2x together to meet VRE
 # use Way's stochastic Wright's Law
@@ -39,16 +39,9 @@ class EnergyModel:
               'gas (direct use)','coal electricity',
               'gas electricity','nuclear electricity',
               'hydroelectricity','biopower electricity',
-              'wind electricity','solar pv electricity','SMR electricity',
+              'wind electricity','solar pv electricity',
               'daily batteries','multi-day storage',
               'electrolyzers','electricity networks', 'P2X']
-        
-        self.elec_gen_techs = [
-            'coal electricity','gas electricity','nuclear electricity',
-            'hydroelectricity','biopower electricity',
-            'wind electricity','solar pv electricity','SMR electricity'
-        ]
-
         self.carrier = ['oil','coal','gas','electricity','P2Xfuels']
         self.sector = ['transport', 'industry', 'buildings', 'energy']
 
@@ -205,9 +198,6 @@ class EnergyModel:
         self.q['P2X'][0] = 3 * 2.95e-4
         self.q['qgrid'][0] = 0.17/1000
         self.q['qtransport'][0] = 2.06/1000
-        # idx2030 = 2030 - self.y0
-        # self.q['SMR electricity'][idx2030] = 0.058
-
 
         # this array is used to represent phase in of P2X fuels
         self.piP2X = np.zeros(self.yend - self.y0 + 1)
@@ -231,7 +221,7 @@ class EnergyModel:
         self.costparams = costparams
 
         # set learning rate technologies
-        self.learningRateTechs = self.technology[5:14]
+        self.learningRateTechs = self.technology[5:13]
 
         # initialize cost dictionaries
         self.gridInv = np.zeros(self.yend - self.y0 + 1)
@@ -242,7 +232,7 @@ class EnergyModel:
         for t in self.technology:
             self.C[t] = np.zeros(self.yend - self.y0 + 1)
 
-        #self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][self.y - self.y0], 1e-9))   # Init ema of electrolyzer unit cost 
+        self.ema_electrolyzer = np.log10(max(self.c['electrolyzers'][self.y - self.y0], 1e-9))   # Init ema of electrolyzer unit cost 
 
         #initialize unit cost and cumulative production dictionaries
         self.u = {}
@@ -250,7 +240,7 @@ class EnergyModel:
         self.omega = {}
 
         # for each technology
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
         
             #initialize production and unit cost arrays and 
             self.z[t] = np.zeros(self.yend - self.y0 + 1)
@@ -266,7 +256,6 @@ class EnergyModel:
                 self.z[t][0] = self.costparams['z0'][t]
             except KeyError:
                 self.z[t][0] = 0.0
-        #self.z['SMR electricity'][idx2030] = 0.058
 
         self.sample_uncertainties()
         
@@ -282,7 +271,7 @@ class EnergyModel:
 
     def sample_uncertainties(self):
 
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
 
             self.omega[t] = 0.0
 
@@ -317,473 +306,7 @@ class EnergyModel:
                             self.costparams['breakpoints']
                                     ['exponent change - normal']['scale']))
 
-    ### plotting functions
-    def plotDemand(self):
-        fig, ax = plt.subplots(figsize=(8,6))
-        df = pd.DataFrame(self.demand, 
-                          index=range(self.y0,self.yend + 1), 
-                          columns=self.demand.keys())
-        df.plot.area(stacked=True, lw=0, ax=ax)
-        plt.xlim(2018,2075)
-        plt.ylabel('EJ')
-        plt.xlabel('Year')
-        plt.title('Demand')
-
-    def plotFinalEnergyBySource(self,label, filename = None):
-        colors = ['black','saddlebrown','darkgray',
-                  'saddlebrown','darkgray',
-                  'magenta','royalblue',
-                  'forestgreen','deepskyblue',
-                  'orange','pink','plum','lawngreen', 'burlywood'] 
-        df = pd.DataFrame(self.q, 
-                          index=range(self.y0,self.yend + 1),
-                          columns = self.q.keys())
-        cols = df.columns[[not(x) in ['qgrid','qtransport',
-                                      'electricity networks',
-                                      'electrolyzers'] 
-                                      for x in df.columns]]
-        df = df[cols]
-
-
-        #第1个面积图：全系统终端能源结构（所有能源技术）
-        #全系统所有能源技术（油、煤、气、电、P2X等）每年的“最终能源供应”，即各能源技术对全社会终端能源的贡献。
-        # annual tech generation
-        fig, ax = plt.subplots(figsize=(8,6))
-        df.plot.area(stacked=True, lw=0, ax=ax,
-                     color=colors, legend=False)
-        ax.plot(range(self.y0,self.yend+1), 
-                 [sum(
-                     [sum(
-                         [self.EF[c,s][y - self.y0] 
-                          for c in self.carrier]
-                         ) for s in self.sector]
-                         ) for y in range(self.y0, self.yend+1)],
-                           'k--', lw=2)
-        ax.set_title('Final energy by source')
-        ax.set_xlim(2018,2075)
-        ax.set_ylim(0,1500)
-        ax.set_ylabel('EJ')
-        ax.set_xlabel('Year')
-
-        # Add legend at the bottom
-        handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels, loc='lower center', ncol=4, bbox_to_anchor=(0.5, -0.15))
-        plt.tight_layout(rect=[0, 0.05, 1, 1])  # leave space at the bottom for the legend
-        if filename:
-            plt.savefig(f'results/figures/{label}/{filename}.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
-        return    #其他图不画也不保存
-
-        # 第2个折线图：电力相关技术/储能/P2X产量（log坐标）
-        fig, ax = plt.subplots(figsize=(8,6))
-        df = df.loc[df.index<self.yend+1]
-        df = df[[x for x in df.columns if 'direct use' not in x]]
-        df.plot(color=colors[3:], legend=False, ax=ax)
-        ax.set_yscale('log', base=10)
-        ax.set_ylim(1e-7, 1e3)
-        ax.set_ylabel('EJ')
-        ax.set_xlabel('Year')
-        ax.set_title('Electricity generation, storage'
-                     ' capacity and P2X production')
-        if filename:
-            plt.savefig(f'./figures/{filename}_elec.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
-
-        # 第3个折线图：P2X年增长率
-        fig, ax = plt.subplots(figsize=(8,6))
-        ax.plot(100*(self.q['P2X'][1:]/self.q['P2X'][:-1]-1))
-        ax.set_ylim(-20, 120)
-        ax.set_ylabel('%')
-        ax.set_xlabel('Year')
-        ax.set_title('P2X growth rate check')
-
-        # 第4个面积图：各发电技术的发电量
-        fig, ax = plt.subplots(figsize=(8,6))
-        df.plot.area(stacked=True, lw=0, ax=ax,
-                     color=colors[3:], legend=False)
-        ax.plot(\
-            range(self.y0+1,self.yend+1), 
-            np.sum(np.array(\
-                [self.EF['electricity',s][1:self.yend+1] for s in self.sector]
-                            ), axis=0), 'k--')
-        ax.set_ylim(0, 600)
-        ax.set_ylabel('EJ')
-        ax.set_xlabel('Year')
-        ax.set_title('Electricity generation by primary source')
-        if filename:
-            plt.savefig(f'./figures/{filename}_primary.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
-
-        #第5个面积图：各发电技术的电力结构占比（%）
-        fig, ax = plt.subplots(figsize=(8,6))
-        df['tot'] = df[df.columns[:-1]].sum(axis=1)
-        df[df.columns[:-2]] = \
-            100*df[df.columns[:-2]].div(df['tot'], axis=0)
-        df[df.columns[:-2]].plot.area(\
-            stacked=True, lw=0, 
-            color=colors[3:], legend=False, ax=ax)
-        ax.set_ylim(0, 150)
-        ax.set_ylabel('%')
-        ax.set_xlabel('Year')
-        ax.set_title('Electricity gen. mix by primary source')
-        if filename:
-            plt.savefig(f'./figures/{filename}_mixprimary.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
-
-        #第6个折线图：各发电技术占比，突出VRE/非VRE
-        fig, ax = plt.subplots(figsize=(8,6))
-        df[df.columns[:-2]].plot(color=colors[3:], legend=False, ax=ax)
-        df['vre'] = df['solar pv electricity'] + df['wind electricity']
-        df['non-vre'] = 100 - df['vre']
-        df['non-vre'].plot(color='k', lw=2, ls=':', ax=ax)
-        df['vre'].plot(color='k', lw=2, ls='--', ax=ax)
-        ax.set_ylim(0, 110)
-        ax.set_ylabel('%')
-        ax.set_xlabel('Year')
-        ax.set_title('Electricity gen. mix by primary source')
-        if filename:
-            plt.savefig(f'./figures/{filename}_mixprimary——.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
     
-    def plotIndividualTechAreas(self, filename=None, ncols=4):
-        """
-        Plot individual area plots for each technology in self.q,
-        and combine them into a single large figure.
-        """
-    
-
-        # Use your color list, cycle if more techs than colors
-        colors = ['black','saddlebrown','darkgray',
-                'saddlebrown','darkgray',
-                'magenta','royalblue',
-                'forestgreen','deepskyblue',
-                'orange','pink','plum','lawngreen', 'burlywood']
-
-        techs = [t for t in self.q.keys() if t not in [
-            'qgrid', 'qtransport', 'electricity networks', 'electrolyzers']]
-        ntech = len(techs)
-        nrows = math.ceil(ntech / ncols)
-        years = range(self.y0, self.yend + 1)
-
-        fig, axes = plt.subplots(nrows, ncols, figsize=(5*ncols, 3*nrows), sharex=True)
-        axes = axes.flatten()
-
-        for i, t in enumerate(techs):
-            ax = axes[i]
-            color = colors[i % len(colors)]
-            ax.fill_between(years, self.q[t], color=color, alpha=0.7)
-            ax.set_title(t)
-            ax.set_xlim(self.y0, self.yend)
-            ax.set_ylabel('EJ')
-            ax.set_xlabel('Year')
-        # Hide unused subplots
-        for j in range(i+1, len(axes)):
-            fig.delaxes(axes[j])
-
-        fig.suptitle('Individual Technology Area Plots', fontsize=18)
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        if filename:
-            plt.savefig(f'./figures/{filename}_individual_areas.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
-        else:
-            plt.show()
-
-
-    def plotCapacityExpansion(self, filename=None, ncols=4):
-        """
-        Plot capacity expansion over time for all technologies (not just learningRateTechs).
-        """
-      
-
-        # 选择所有技术（不只是learningRateTechs）
-        colors = ['black','saddlebrown','darkgray',
-              'saddlebrown','darkgray',
-              'magenta','royalblue',
-              'forestgreen','deepskyblue',
-              'orange','pink','plum','lawngreen', 'burlywood']
-
-        techs = [t for t in self.technology if t in self.Q]
-        ntech = len(techs)
-        nrows = math.ceil(ntech / ncols)
-        years = range(self.y0, self.yend + 1)
-
-        fig, axes = plt.subplots(nrows, ncols, figsize=(5*ncols, 3*nrows), sharex=True)
-        axes = axes.flatten()
-
-        for i, t in enumerate(techs):
-            ax = axes[i]
-            # 计算每年总在线容量
-            color = colors[i % len(colors)]
-            capacity = [np.sum(self.Q[t][y-self.y0, :]) for y in years]
-            ax.plot(years, capacity, color=color, label=f"{t} capacity")
-            ax.set_title(t)
-            ax.set_ylabel('Capacity (EJ/yr)')
-            ax.set_xlabel('Year')
-        # Hide unused subplots
-        for j in range(i+1, len(axes)):
-            fig.delaxes(axes[j])
-
-        fig.suptitle('Capacity Expansion Over Time', fontsize=18)
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        if filename:
-            plt.savefig(f'./figures/{filename}_capacity_expansion.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
-        else:
-            plt.show()
-    
-    def plotNewBuildsAndRetirements(self, filename=None, ncols=4):
-        """
-        Plot new builds and retirements for each technology in self.Q.
-        Each subplot shows new builds (solid line) and retirements (dashed line) per year.
-        Colors match plotFinalEnergyBySource.
-        """
-
-
-        colors = ['black','saddlebrown','darkgray',
-                'saddlebrown','darkgray',
-                'magenta','royalblue',
-                'forestgreen','deepskyblue',
-                'orange','pink','plum','lawngreen', 'burlywood']
-
-        techs = [t for t in self.technology if t in self.Q]
-        ntech = len(techs)
-        nrows = math.ceil(ntech / ncols)
-        years = range(self.y0, self.yend + 1)
-
-        fig, axes = plt.subplots(nrows, ncols, figsize=(5*ncols, 3*nrows), sharex=True)
-        axes = axes.flatten()
-
-        for i, t in enumerate(techs):
-            ax = axes[i]
-            color = colors[i % len(colors)]
-            # New builds: diagonal of Q
-            new_builds = [self.Q[t][y-self.y0, y-self.y0] for y in years]
-            # Retirements: capacity built in year y-Lifetime, retired in year y
-            L = self.costparams['L'][t] if t in self.costparams['L'] else 0
-            retirements = [self.Q[t][y-self.y0-L, y-self.y0-L] if (y-self.y0-L)>=0 else 0 for y in years]
-            ax.plot(years, new_builds, color=color, label='New builds', lw=2)
-            ax.plot(years, retirements, color=color, ls='--', label='Retirements', lw=2)
-            ax.set_title(t)
-            ax.set_ylabel('Capacity (EJ/yr)')
-            ax.set_xlabel('Year')
-            ax.legend()
-        # Hide unused subplots
-        for j in range(i+1, len(axes)):
-            fig.delaxes(axes[j])
-
-        fig.suptitle('New Builds and Retirements by Technology', fontsize=18)
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        if filename:
-            plt.savefig(f'./figures/{filename}_newbuilds_retirements.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
-        else:
-            plt.show()
-
-    
-    def get_generation_shares(self):
-        #Add a function to get generation share for each tech each year
-        """
-        Returns a DataFrame: index=year, columns=tech, values=share of each tech in total final energy supplied.
-        """
-        years = range(self.y0, self.yend + 1)
-        techs = [t for t in self.q.keys() if t not in ['qgrid','qtransport','electricity networks','electrolyzers']]
-        data = []
-        for y in years:
-            total = sum([self.q[t][y - self.y0] for t in techs])
-            if total > 0:
-                shares = [self.q[t][y - self.y0] / total for t in techs]
-            else:
-                shares = [0 for t in techs]
-            data.append(shares)
-        df = pd.DataFrame(data, index=years, columns=techs)
-        return df
-
-    def plotCostBySource(self):
-
-        colors = ['black','saddlebrown','darkgray',
-                  'saddlebrown','darkgray',
-                  'magenta','royalblue',
-                  'forestgreen','deepskyblue',
-                  'orange','pink','plum','lawngreen', 'burlywood']
-        
-        df = pd.DataFrame(self.C, 
-                          index=range(self.y0,self.yend + 1),
-                          columns = self.C.keys())
-        
-        cols = df.columns[[not(x) in ['qgrid','qtransport',
-                                      'P2X'] for x in df.columns]]
-        df = df[cols]
-
-        # from usd to trillion USD
-        df[cols] = df[cols] * 1e-12
-
-        # from billion to trillion
-        df['electricity networks'] = self.gridInv * 1e-3 
-        
-        fig, ax = plt.subplots(figsize=(8,6))
-        df.plot.area(stacked=True, lw=0, ax=ax,
-                     color=colors, legend=False)
-        ax.plot(range(self.y0,self.yend+1), 
-                 [sum(
-                     [sum(
-                         [self.EF[c,s][y - self.y0] 
-                          for c in self.carrier]
-                         ) for s in self.sector]
-                         ) for y in range(self.y0, self.yend+1)], 
-                         'k--', lw=2,
-                         )
-        ax.set_title('Final cost by source')
-        ax.set_xlim(2018,2075)
-        ax.set_ylim(0,12)
-        ax.set_ylabel('Trillion USD')
-        ax.set_xlabel('Year')
-
-        df = pd.DataFrame(self.c, index=range(self.y0,self.yend + 1),
-                            columns = self.c.keys())
-        cols = df.columns[[not(x) in ['qgrid','qtransport',
-                                      'P2X'] for x in df.columns]]
-        df = df[cols]
-
-        fig, ax = plt.subplots(figsize=(8,6))
-        df.plot(color=colors, legend=False, ax=ax)
-        ax.set_title('LCOE')
-        ax.set_ylabel('USD/GJ')
-        ax.set_xlabel('Year')
-        ax.set_yscale('log', base=10)
-
-    def plotFinalEnergy(self, label, filename = None):
-        df = pd.DataFrame(self.EF, 
-                          index=range(self.y0,self.yend + 1), 
-                            columns=self.EF.keys())
-        df.columns = \
-            [str(a[0]+'_'+a[1]) for a in df.columns.to_flat_index()]
-        
-        sectors = self.sector
-        colors=['black','saddlebrown',
-                                 'darkgray','lightskyblue','lime']
-
-        legend_labels = ['oil', 'coal', 'gas', 'electricity', 'P2Xfuel']
-        fig, axes = plt.subplots(2, 2, figsize=(14, 10), sharex=True)
-        for i, s in enumerate(sectors):
-            ax = axes[i // 2, i % 2]
-            df_ = df[[x for x in df.columns if x.split('_')[1] == s]].copy()
-            df_.plot.area(stacked=True, lw=0, color=colors, ax=ax, legend=False)
-            ax.set_title(f'Final energy - {s}')
-            ax.set_xlim(2018, 2075)
-            ax.set_ylim(0, 300)
-            ax.set_ylabel('EJ')
-            ax.set_xlabel('Year')
-            if i == 0:
-                handles, _ = ax.get_legend_handles_labels()
-        # 在整个figure底部放legend
-        if handles:
-            fig.legend(handles, legend_labels, loc='lower center', ncol=len(legend_labels), bbox_to_anchor=(0.5, -0.05))
-        fig.tight_layout()
-        if filename:
-            save_dir = f'results/figures/{label}'
-            plt.savefig(f'{save_dir}/{filename}_finalenergyBySector.png', dpi=300, bbox_inches='tight')
-            plt.close(fig)
-        else:
-            plt.show()
-        
-        
-        for s in self.sector:
-            df_ = df[[x for x in df.columns if x.split('_')[1]==s]].copy()
-            df_.plot.area(stacked=True, lw=0, 
-                          color=['black','saddlebrown',
-                                 'darkgray','lightskyblue','lime'])
-            plt.title('Final energy - '+s)
-            plt.xlim(2018,2075)
-            plt.ylim(0,300)
-            plt.ylabel('EJ')
-            plt.xlabel('Year')
-
-    def plotS7(self):
-
-        colors = ['black','saddlebrown',
-                  'darkgray','lightskyblue','lime']
-
-        fig, ax = plt.subplots(4,4, sharex=True, figsize=(14,10))
-
-        counts = 0
-        for s in self.sector:
-            countc = 0
-            for c in self.carrier:
-                ax[counts][0].plot(range(self.y0+1,self.yend+1), 
-                            100 * \
-                                (self.EU[c,s][1:] / \
-                                 (1e-16+self.EU[c,s][:-1])
-                                   - 1),
-                            color=colors[countc] )
-                countc += 1
-            counts += 1
-        
-        [ax[x][0].set_ylim(-20, 80) for x in range(4)]
-        [ax[x][0].set_xlim(2018, 2075) for x in range(4)]
-        ax[0][0].set_title('Useful energy growth rates [%]')
-        ax[0][0].set_ylabel('Transport')
-        ax[1][0].set_ylabel('Industry')
-        ax[2][0].set_ylabel('Buildings')
-        ax[3][0].set_ylabel('Energy sector')
-
-
-        counts = 0
-        for s in self.sector:
-            countc = 0
-            for c in self.carrier:
-                ax[counts][1].plot(range(self.y0+1,2071), 
-                                   self.EU[c,s][1:51],
-                                    color=colors[countc] )
-                countc += 1
-            if not s=='energy':
-                ax[counts][1].plot(range(self.y0+1,2071), 
-                                sum([self.EU[c,s][1:51] 
-                                     for c in self.carrier]),
-                                'k--' )
-            
-            counts += 1
-        
-        [ax[x][1].set_ylim(1e-4, 1e3) for x in range(4)]
-        [ax[x][1].set_yscale('log', base=10) for x in range(4)]
-        ax[0][1].set_title('Useful energy [EJ]')
-
-
-        counts = 0
-        df = pd.DataFrame(self.EU, 
-                          index=range(self.y0, self.yend + 1), 
-                columns=self.EU.keys())
-        df.columns = \
-            [str(a[0]+'_'+a[1]) for a in df.columns.to_flat_index()]
-        df = df.loc[(df.index>2020) & (df.index<2071)]
-        for s in self.sector:
-            df_ = df[[x for x in df.columns if x.split('_')[1]==s]].copy()
-            df_.plot.area(stacked=True, lw=0, 
-                          color=colors, ax=ax[counts][2],
-                          legend=False)
-            counts += 1
-        [ax[x][2].set_ylim(0, 300) for x in range(4)]
-        ax[0][2].set_title('Useful energy [EJ]')
-
-        counts = 0
-        df = pd.DataFrame(self.EF, 
-                          index=range(self.y0, self.yend + 1), 
-                columns=self.EF.keys())
-        df.columns = \
-            [str(a[0]+'_'+a[1]) for a in df.columns.to_flat_index()]
-        df = df.loc[(df.index>2020) & (df.index<2071)]
-
-        for s in self.sector:
-            df_ = df[[x for x in df.columns if x.split('_')[1]==s]].copy()
-            df_.plot.area(stacked=True, lw=0, 
-                          color=colors, ax=ax[counts][3],
-                          legend=False)
-            counts += 1
-        [ax[x][3].set_ylim(0, 300) for x in range(4)]
-        ax[0][3].set_title('Final energy [EJ]')
-
-        fig.subplots_adjust(hspace=0.3, wspace=0.3, 
-                            top=0.95, bottom=0.075,
-                            left=0.07, right=0.95)
 
     # simulation
     def simulate(self):
@@ -795,7 +318,7 @@ class EnergyModel:
             self.step()
 
         # compute total cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
             for y in range(self.y0, self.yend+1):
                 if t not in self.learningRateTechs:
                     self.C[t][y-self.y0] = \
@@ -816,23 +339,28 @@ class EnergyModel:
                                     for tau in range(self.y0, y+1)])
 
         # adding grid costs (which are in billion USD)
-        self.C[self.technology[14]] = self.gridInv * 1e9                
+        self.C[self.technology[13]] = self.gridInv * 1e9                
 
         # compute total cost
         self.totalCost = np.zeros(self.yend - self.y0 + 1)
         for y in range(self.y0, self.yend+1):
-            for t in self.technology[:15]:
+            for t in self.technology[:14]:
                 self.totalCost[y-self.y0] += self.C[t][y-self.y0]
             # check if there is any demand deficitf
-            total_elec_supply = sum(self.q[t][y-self.y0] for t in self.elec_gen_techs)
-            if total_elec_supply < self.elec[y-self.y0] - 1e-1:
-
+            if sum([self.q[self.technology[x]][y-self.y0]  \
+                    for x in self.carrierInputs\
+                        [self.carrier.index('electricity')]]) < \
+                                self.elec[y-self.y0] - 1e-1:
                 ## using a value of lost load of 10000 USD/MWh 
                 ## equivalent to 10000 1e9 USD/ 1e9 MWh
                 ## equivalent to 10000 bln USD/PWh
                 self.totalCost[y-self.y0] += 10000 * 1/(1000/(60*60)) * \
-                    1e9 * max(0, self.elec[y-self.y0] - total_elec_supply)
-            
+                    1e9 * max(0, self.elec[y-self.y0] - \
+                            sum([self.q[self.technology[x]][y-self.y0]  \
+                                    for x in self.carrierInputs\
+                                    [self.carrier.index('electricity')]]))
+    
+
 
         # compute discounted cost
         # discount rate is sate to be 2% (0.02) 
@@ -1072,77 +600,6 @@ class EnergyModel:
                                         if t != sl]))
                 
               
-
-        elif self.mode == 'policy':
-
-            techs = [self.technology[x] for x in self.carrierInputs[self.carrier.index('electricity')]]
-            techs.append('electrolyzers')
-            techs.append('SMR electricity')
-
-            for t in techs:
-
-                
-                # inputs for each technology"
-                # 1) unit cost of generation from technology
-                # 2) learning rate of technology (actually use cumulative production, could use linear regression to estimate the learning rate)
-                # 3) share of generation obtained from technology
-                # 4) growth of electricity
-                # 5) time
-
-               
-
-                # decide every year 
-                year_idx = self.y - self.y0
-                 # SMR 只允许 2030 年起上线：
-                if t == 'SMR electricity':
-                    # 本年决策写入下一年格子：q[t][year_idx+1]
-                    # 因此在 2020..2028 年（self.y <= 2028）把下一年置 0
-                    if self.y <= 2028:
-                        if year_idx + 1 < len(self.q[t]):
-                            self.q[t][year_idx + 1] = 0.0
-                        continue
-                    # 在 2029 年，直接写入 2030 年的起始值 0.058，不调用 policy
-                    if self.y == 2029:
-                        if year_idx + 1 < len(self.q[t]):
-                            self.q[t][year_idx + 1] = 0.058
-                        continue
-
-                pol_input = [np.log10(self.c[t][self.y-self.y0]),
-                                np.log10(self.z[t][self.y-self.y0])/10,
-                                (self.y-self.y0)/(self.yend-self.y0),
-                                10*((sum(self.q[t_][self.y-self.y0] for t_ in self.elec_gen_techs) / self.elec[self.y-self.y0] - 1)),
-                                # 10*((sum([self.q[self.technology[x]][self.y-self.y0] \
-                                #     for x in self.carrierInputs[self.carrier.index('electricity')]])/\
-                                #     self.elec[self.y-self.y0] - 1)),
-                                self.q[t][self.y-self.y0]/self.elec[self.y-self.y0],
-                                #np.log10(self.c['electrolyzers'][self.y-self.y0]) # add unit cost of electrolyzer
-                                ]
-
-                
-                
-                
-                #归一化
-                if self.input_norm:
-                    # 只对第1维和第4维做z-score，其他保持原比例
-                    means = np.array([1.06, 0.0, 0.0, 1.09, 0.0])
-                    stds  = np.array([0.38, 1.0, 1.0, 0.71, 1.0])
-                    
-                    arr = np.array(pol_input)
-                    arr[0] = (arr[0] - means[0]) / stds[0]
-                    arr[3] = (arr[3] - means[3]) / stds[3]
-                    pol_input = arr.tolist()
-                    
-                
-                #print('policy inputs:', pol_input)
-
-                ## linear policy
-                gt = self.policy.get_action(pol_input)
-                gt = min(1.0, gt)
-                qp = self.q[t][self.y-self.y0]
-                qf = qp * (1 + gt)
-                #qf = min(qp * (1 + gt), maxcap)  # if want to add generation cap for tech
-                self.q[t][self.y+1-self.y0] = max(0, qf)
-
         # 7 Calculate the quantities of fossil fuel energy carriers
         #  required by the energy sector
 
@@ -1306,52 +763,7 @@ class EnergyModel:
             self.q['electrolyzers'][self.y+1-self.y0] = \
                 1/(24*365*0.5*0.7) * self.q['P2X'][self.y+1-self.y0]
         
-        elif self.mode == 'policy':
-
-            #计算P2X产能约束
-            max_p2x_capacity = self.q['electrolyzers'][self.y+1-self.y0] * (24*365*0.5*0.7)
-            
-            # 优先满足部门直接需求
-            sector_p2x_demand = sum([self.EF['P2Xfuels',s][self.y+1-self.y0] 
-                                    for s in self.sector])
-            
-            # if self.y == 2040:
-            #     print(self.y)
-            #     print('from policy p2x:', max_p2x_capacity)
-            #     print('p2x sector demand:', sector_p2x_demand)
-            
-            if max_p2x_capacity >= sector_p2x_demand:
-                 # 产能充足，有剩余可用于VRE消纳
-                available_p2x_for_vre = max_p2x_capacity - sector_p2x_demand
-            else:
-                 # 产能不足，强制调整electrolyzer以满足部门需求
-                available_p2x_for_vre = 0
-                self.q['electrolyzers'][self.y+1-self.y0] = sector_p2x_demand / (24*365*0.5*0.7)
-
-            self.q['P2X'][self.y+1-self.y0] = max(sector_p2x_demand, max_p2x_capacity )
-                
-
-            
-            vre_total = self.q['solar pv electricity'][self.y+1-self.y0] + \
-                        self.q['wind electricity'][self.y+1-self.y0]
-             # 总VRE消纳需求（基于原来的psi参数）
-            gt0, gT, t1, t2, t3, psi = self.EFgp['P2Xfuels','electricity']
-            total_vre_absorption_need = 2 * psi * vre_total * min(self.piP2X[self.y+1-self.y0], 1)
-
-            # P2X承担的VRE消纳（在满足部门需求后）
-            p2x_vre_absorption = min(available_p2x_for_vre, total_vre_absorption_need)
-            
-            # Storage需要承担的剩余VRE消纳
-            remaining_vre_for_storage = max(0, total_vre_absorption_need - p2x_vre_absorption)
-            
-            self.q['multi-day storage'][self.y+1-self.y0] = remaining_vre_for_storage / 365
-    
-            # if self.y == 2050:
-            #     print(self.y)
-            #     print('P2x sector:',  sum([self.EF['P2Xfuels',s][self.y+1-self.y0] \
-            #                 for s in self.sector]))
-            #     print('P2x renewable:', available_p2x_for_vre)
-            #     print('multi_day Storage:', self.q['multi-day storage'][self.y+1-self.y0])
+       
 
         
         #### compute costs
@@ -1406,7 +818,7 @@ class EnergyModel:
             #             sum(self.Q[t][self.y-self.y0])
 
         # compute unit cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
 
             # update cumulative production
             self.z[t][self.y+1-self.y0] = \
@@ -1570,7 +982,7 @@ class EnergyModel:
         # compute unit cost of technologies
 
         # for each technology
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
                 
             # iterate over the years
             for y in range(self.y0, self.yend):
@@ -1700,7 +1112,7 @@ class EnergyModel:
                                         0.19 * self.u[t][y-self.y0]))
 
         # compute total cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:13]:
             for y in range(self.y0, self.yend+1):
                 if t not in self.learningRateTechs:
                     self.C[t][y-self.y0] = \
@@ -1721,12 +1133,12 @@ class EnergyModel:
                                     for tau in range(self.y0, y+1)])
 
         # adding grid costs (which are in billion USD)
-        self.C[self.technology[14]] = self.gridInv * 1e9
+        self.C[self.technology[13]] = self.gridInv * 1e9
 
         # compute total cost
         self.totalCost = np.zeros(self.yend - self.y0 + 1)
         for y in range(self.y0, self.yend+1):
-            for t in self.technology[:15]:
+            for t in self.technology[:14]:
                 self.totalCost[y-self.y0] += self.C[t][y-self.y0]
 
         # compute discounted cost

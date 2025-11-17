@@ -201,6 +201,8 @@ costparams['L']['solar pv electricity'] = 30
 costparams['L']['daily batteries'] = 12
 costparams['L']['multi-day storage'] = 20
 costparams['L']['electrolyzers'] = 10
+costparams['L']['SMR electricity'] = 60
+
 costparams['c0']['oil (direct use)'] = 11.6
 costparams['c0']['coal (direct use)'] = 1.84
 costparams['c0']['gas (direct use)'] = 5.5
@@ -214,6 +216,8 @@ costparams['c0']['solar pv electricity'] = 15.7
 costparams['c0']['daily batteries'] = 86000
 costparams['c0']['multi-day storage'] = 111100
 costparams['c0']['electrolyzers'] = 364722
+costparams['c0']['SMR electricity'] = 20.0
+
 costparams['z0']['coal electricity'] = 1118
 costparams['z0']['gas electricity'] = 514
 costparams['z0']['nuclear electricity'] = 345
@@ -224,6 +228,8 @@ costparams['z0']['solar pv electricity'] = 13.3
 costparams['z0']['daily batteries'] = 0.00422
 costparams['z0']['multi-day storage'] = 10.8*1e-7
 costparams['z0']['electrolyzers'] = 2.89*1e-7
+costparams['z0']['SMR electricity'] = 1e-9
+
 costparams['mr']['oil (direct use)'] = 0.8128
 costparams['k']['oil (direct use)'] = 0.4002
 costparams['sigma']['oil (direct use)'] = 0.3037
@@ -238,6 +244,7 @@ costparams['k']['coal electricity'] = 0.206
 costparams['sigma']['coal electricity'] = 0.102
 costparams['mr']['gas electricity'] = 0.827
 costparams['k']['gas electricity'] = 0.485
+
 costparams['sigma']['gas electricity'] = 0.131
 costparams['omega']['nuclear electricity'] = 0.0
 costparams['sigmaOmega']['nuclear electricity'] = 0.01
@@ -245,8 +252,6 @@ costparams['sigma']['nuclear electricity'] = 0.02
 costparams['omega']['hydroelectricity'] = 0.0
 costparams['sigmaOmega']['hydroelectricity'] = 0.01
 costparams['sigma']['hydroelectricity'] = 0.01
-
-
 costparams['omega']['biopower electricity'] = 0.05
 costparams['sigmaOmega']['biopower electricity'] = 0.01
 costparams['sigma']['biopower electricity'] = 0.02
@@ -275,6 +280,13 @@ costparams['sigma']['multi-day storage'] = 0.065
 costparams['omega']['electrolyzers'] = 0.129
 costparams['sigmaOmega']['electrolyzers'] = 0.067
 costparams['sigma']['electrolyzers'] = 0.201
+
+costparams['omega']['SMR electricity'] = 0.175
+costparams['sigmaOmega']['SMR electricity'] = 0.095
+costparams['sigma']['SMR electricity'] = 0.201
+
+
+
 #costparams['sigma']['electrolyzers'] = 0.1
 
 # set breakpoint params (in this case no breakpoints)
@@ -312,12 +324,12 @@ learningRateTechs = ['nuclear electricity',
                      'solar pv electricity', 
                      'electrolyzers'
                      ]
-
+learningRateTechs.append('SMR electricity')
 
 #uncomment to set common parameters for learning rate
-for t in learningRateTechs:
-    costparams['omega'][t] = 0.37
-    costparams['sigmaOmega'][t] = 0.35
+# for t in learningRateTechs:
+#     costparams['omega'][t] = 0.37
+#     costparams['sigmaOmega'][t] = 0.35
 
 # create labels different cost assumptions
 costsAssumptions = {}
