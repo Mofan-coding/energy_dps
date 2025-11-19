@@ -26,7 +26,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '103001'
+label = '111601'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -34,9 +34,9 @@ hidden_size = 2
 input_norm = False
 
 
-savegif = False #individual simulation dynamics 
-savebox= True # boxplot of costs 
-save_sharebox = False  #Boxplot of End-of-Century Generation Share
+savegif = True #individual simulation dynamics 
+savebox= False # boxplot of costs 
+save_sharebox = True  #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
 
@@ -45,9 +45,13 @@ save_pc = False  #Parallel Coordinates Plot
 labels = ['Way et al. (2022)']
 
 # define colors for technologies
+# techcolors = ['black', 'saddlebrown', 'darkgray', 'saddlebrown', 'darkgray',
+#               'magenta', 'royalblue', 'forestgreen', 'deepskyblue',
+#               'orange', 'pink', 'plum', 'lawngreen', 'burlywood'] 
+
 techcolors = ['black', 'saddlebrown', 'darkgray', 'saddlebrown', 'darkgray',
               'magenta', 'royalblue', 'forestgreen', 'deepskyblue',
-              'orange', 'pink', 'plum', 'lawngreen', 'burlywood'] 
+              'orange', 'steelblue', 'pink', 'plum', 'lawngreen', 'burlywood']
 
 # resimulate only if required
 if simulate:
@@ -191,11 +195,16 @@ if simulate:
                     # box_data = pd.DataFrame([df.loc[plot_year] for df in all_shares])
                     # techs = box_data.columns.tolist()
 
+                    # colors = ['black','saddlebrown','darkgray',
+                    #         'saddlebrown','darkgray',
+                    #         'magenta','royalblue',
+                    #         'forestgreen','deepskyblue',
+                    #         'orange','pink','plum','lawngreen', 'burlywood']
                     colors = ['black','saddlebrown','darkgray',
                             'saddlebrown','darkgray',
                             'magenta','royalblue',
                             'forestgreen','deepskyblue',
-                            'orange','pink','plum','lawngreen', 'burlywood']
+                            'orange','steelblue','pink','plum','lawngreen','burlywood']
                     
                     #plt.figure(figsize=(14,6))
 
