@@ -26,7 +26,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '111601'
+label = '111801'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -35,8 +35,8 @@ input_norm = False
 
 
 savegif = True #individual simulation dynamics 
-savebox= False # boxplot of costs 
-save_sharebox = True  #Boxplot of End-of-Century Generation Share
+savebox= True # boxplot of costs 
+save_sharebox = False #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
 
 
@@ -188,7 +188,11 @@ if simulate:
                     # 准备policy的boxplot数据
                     policy_box_data = pd.DataFrame([df.loc[plot_year] for df in all_shares_pol])
                     techs = policy_box_data.columns.tolist()
-                    
+                    techs = [t for t in techs if t in ['solar pv electricity',
+                                                       'wind electricity',
+                                                       'SMR electricity']]
+
+
                     # 准备exogenous的线条数据（取第一个simulation，因为exogenous都一样）
                     exo_line_data = all_shares_exo[0].loc[plot_year]
             
@@ -200,12 +204,13 @@ if simulate:
                     #         'magenta','royalblue',
                     #         'forestgreen','deepskyblue',
                     #         'orange','pink','plum','lawngreen', 'burlywood']
-                    colors = ['black','saddlebrown','darkgray',
-                            'saddlebrown','darkgray',
-                            'magenta','royalblue',
-                            'forestgreen','deepskyblue',
-                            'orange','steelblue','pink','plum','lawngreen','burlywood']
+                    # colors = ['black','saddlebrown','darkgray',
+                    #         'saddlebrown','darkgray',
+                    #         'magenta','royalblue',
+                    #         'forestgreen','deepskyblue',
+                    #         'orange','steelblue','pink','plum','lawngreen','burlywood']
                     
+                    colors = ['orange', 'deepskyblue', 'steelblue']  # solar, wind, SMR
                     #plt.figure(figsize=(14,6))
 
                     fig, ax = plt.subplots(figsize=(14, 6))
@@ -235,7 +240,8 @@ if simulate:
                     ax.set_ylabel(f'Share of Final Energy in {plot_year}')
                     ax.set_xlabel('Technology')
                     ax.set_title(f'Comparison: Exogenous vs Policy Generation Share in {plot_year}')
-                    ax.tick_params(axis='x', rotation=45)
+                    #ax.tick_params(axis='x', rotation=45)
+                    ax.tick_params(axis='x')
                     
                     # 添加图例
                     ax.legend(loc='upper right')

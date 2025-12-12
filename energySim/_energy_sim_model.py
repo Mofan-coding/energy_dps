@@ -1501,7 +1501,8 @@ class EnergyModel:
                                 self.u[t][self.y+1-self.y0] + \
                                     0.19 * self.u[t][self.y-self.y0]))                
 
-
+        idx2030 = 2030 - self.y0
+        self.c['SMR electricity'][idx2030] = self.costparams['c0']['SMR electricity']
 
 
         
