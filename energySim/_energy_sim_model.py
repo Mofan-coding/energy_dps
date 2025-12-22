@@ -1105,6 +1105,7 @@ class EnergyModel:
                     if self.y == 2029:
                         if year_idx + 1 < len(self.q[t]):
                             self.q[t][year_idx + 1] = 0.058
+                            self.z[t][year_idx + 1] = 0.058 
                         continue
 
                 pol_input = [np.log10(self.c[t][self.y-self.y0]),
@@ -1503,7 +1504,7 @@ class EnergyModel:
 
         idx2030 = 2030 - self.y0
         self.c['SMR electricity'][idx2030] = self.costparams['c0']['SMR electricity']
-
+        self.z['SMR electricity'][idx2030] = 0.058
 
         
         # advance time counter
