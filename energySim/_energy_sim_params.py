@@ -281,8 +281,8 @@ costparams['omega']['electrolyzers'] = 0.129
 costparams['sigmaOmega']['electrolyzers'] = 0.067
 costparams['sigma']['electrolyzers'] = 0.201
 
-#costparams['omega']['SMR electricity'] = 0.175
-costparams['omega']['SMR electricity'] = 0.074
+costparams['omega']['SMR electricity'] = 0.175
+#costparams['omega']['SMR electricity'] = 0.074
 costparams['sigmaOmega']['SMR electricity'] = 0.095
 costparams['sigma']['SMR electricity'] = 0.201
 
