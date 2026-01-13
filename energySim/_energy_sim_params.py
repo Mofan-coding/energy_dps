@@ -202,6 +202,7 @@ costparams['L']['daily batteries'] = 12
 costparams['L']['multi-day storage'] = 20
 costparams['L']['electrolyzers'] = 10
 costparams['L']['SMR electricity'] = 60
+costparams['L']['SMR2 electricity'] = 60
 
 costparams['c0']['oil (direct use)'] = 11.6
 costparams['c0']['coal (direct use)'] = 1.84
@@ -217,6 +218,7 @@ costparams['c0']['daily batteries'] = 86000
 costparams['c0']['multi-day storage'] = 111100
 costparams['c0']['electrolyzers'] = 364722
 costparams['c0']['SMR electricity'] = 20.0
+costparams['c0']['SMR2 electricity'] = 20.0
 
 costparams['z0']['coal electricity'] = 1118
 costparams['z0']['gas electricity'] = 514
@@ -229,6 +231,7 @@ costparams['z0']['daily batteries'] = 0.00422
 costparams['z0']['multi-day storage'] = 10.8*1e-7
 costparams['z0']['electrolyzers'] = 2.89*1e-7
 costparams['z0']['SMR electricity'] = 1e-9
+costparams['z0']['SMR2 electricity'] = 1e-9
 
 costparams['mr']['oil (direct use)'] = 0.8128
 costparams['k']['oil (direct use)'] = 0.4002
@@ -281,10 +284,14 @@ costparams['omega']['electrolyzers'] = 0.129
 costparams['sigmaOmega']['electrolyzers'] = 0.067
 costparams['sigma']['electrolyzers'] = 0.201
 
-costparams['omega']['SMR electricity'] = 0.175
-#costparams['omega']['SMR electricity'] = 0.074
+#costparams['omega']['SMR electricity'] = 0.175
+costparams['omega']['SMR electricity'] = 0.074
 costparams['sigmaOmega']['SMR electricity'] = 0.095
 costparams['sigma']['SMR electricity'] = 0.201
+
+costparams['omega']['SMR2 electricity'] = 0.074
+costparams['sigmaOmega']['SMR2 electricity'] = 0.095
+costparams['sigma']['SMR2 electricity'] = 0.201
 
 
 
@@ -326,6 +333,7 @@ learningRateTechs = ['nuclear electricity',
                      'electrolyzers'
                      ]
 learningRateTechs.append('SMR electricity')
+learningRateTechs.append('SMR2 electricity')
 
 #uncomment to set common parameters for learning rate
 # for t in learningRateTechs:

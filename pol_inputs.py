@@ -5,10 +5,10 @@ import numpy as np
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '092901'
+label = '122201'
 scenario = 'fast transition'
 policy_path = f'results/{label}_{scenario}_policy.pth'
-nsim = 100
+nsim = 1
 gt_clip = 1
 hidden_size = 2
 input_norm = False
@@ -35,6 +35,7 @@ elec_techs = ['coal electricity', 'gas electricity', 'nuclear electricity',
               'solar pv electricity', 'electrolyzer'] 
 
 orig_get_action = model.policy.get_action
+actions_log = []  # 记录 (year, tech, gt)
 
 def logging_get_action(pol_input):
     global call_count
@@ -43,40 +44,45 @@ def logging_get_action(pol_input):
 
         tech_idx = call_count % 8
 
-        if tech_idx == 7: # elecrrolzyer 索引
-            year = model.y0 + (call_count // 8)
+        # if tech_idx == 7: # elecrrolzyer 索引
+        #     year = model.y0 + (call_count // 8)
 
-            gt_raw = orig_get_action(pol_input)
+        #     gt_raw = orig_get_action(pol_input)
 
-            # 提取标量值
-            if isinstance(gt_raw, np.ndarray):
-                gt = gt_raw.item()  # 将(1,)数组转换为标量
-            else:
-                gt = float(gt_raw)
+        #     # 提取标量值
+        #     if isinstance(gt_raw, np.ndarray):
+        #         gt = gt_raw.item()  # 将(1,)数组转换为标量
+        #     else:
+        #         gt = float(gt_raw)
 
        
-            if year == 2090: 
-                # 获取当前electrolyzer容量
-                current_electrolyzer = model.q['electrolyzers'][model.y-model.y0]
+            # if year == 2090: 
+            #     # 获取当前electrolyzer容量
+            #     current_electrolyzer = model.q['electrolyzers'][model.y-model.y0]
 
-                #solar_inputs.append(arr.tolist())
-                print(f"year {year}: inputs={arr}")
-                print(f"  Tech cost: {arr[0]:.3f}")
-                # print(f"  Cum prod/10: {arr[1]:.3f}")
-                # print(f"  Time progress: {arr[2]:.3f}")
-                # print(f"  Supply-demand: {arr[3]:.3f}")
-                # print(f"  Tech share: {arr[4]:.3f}")
-                print(f"  Growth rate output: {gt:.3f}")
+            #     #solar_inputs.append(arr.tolist())
+            #     print(f"year {year}: inputs={arr}")
+            #     print(f"  Tech cost: {arr[0]:.3f}")
+            #     # print(f"  Cum prod/10: {arr[1]:.3f}")
+            #     # print(f"  Time progress: {arr[2]:.3f}")
+            #     # print(f"  Supply-demand: {arr[3]:.3f}")
+            #     # print(f"  Tech share: {arr[4]:.3f}")
+            #     print(f"  Growth rate output: {gt:.3f}")
    
                 
-                 # 计算下一年的electrolyzer容量
-                gt = min(1.0, gt)
-                next_electrolyzer = current_electrolyzer * (1 + gt)
-                print(f"  Next year electrolyzer capacity: {next_electrolyzer:.6f}")
+            #      # 计算下一年的electrolyzer容量
+            #     gt = min(1.0, gt)
+            #     next_electrolyzer = current_electrolyzer * (1 + gt)
+            #     print(f"  Next year electrolyzer capacity: {next_electrolyzer:.6f}")
+        year = model.y0 + (call_count // len(elec_techs))
 
-        call_count +=1
+        gt_raw = orig_get_action(pol_input)
+        gt = float(np.asarray(gt_raw).reshape(-1)[0])  # 策略增长率
+        actions_log.append((year, elec_techs[tech_idx], gt))
 
+        call_count += 1
         all_inputs.append(arr.tolist())
+      
     return orig_get_action(pol_input)
 
 model.policy.get_action = logging_get_action
@@ -88,6 +94,15 @@ for n in range(nsim):
     _ = model.simulate()
 
 all_inputs = np.asarray(all_inputs, dtype=float)  # [N, 5]
+
+for tech in ['solar pv electricity', 'wind electricity']:
+    neg = [(y, g) for (y, t, g) in actions_log if t == tech and g < 0]
+    if neg:
+        print(f'{tech} 负增长年份数: {len(neg)}')
+        for y, g in neg[:20]:
+            print(f'  Year {y}: gt={g:.3f}')
+    else:
+        print(f'{tech} 未出现负增长率')
 #solar_inputs = np.asarray(solar_inputs, dtype=float)
 
 #print("Collected samples:", all_inputs.shape)
