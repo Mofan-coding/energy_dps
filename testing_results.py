@@ -26,7 +26,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '122201'
+label = '011301'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -36,9 +36,9 @@ input_norm = False
 
 savegif = True #individual simulation dynamics 
 savebox= False # boxplot of costs 
-save_sharebox = True #Boxplot of End-of-Century Generation Share
+save_sharebox = False #Boxplot of End-of-Century Generation Share
 save_pc = False  #Parallel Coordinates Plot
-
+new_sharebox = True # boxplot of selected techs
 
 
 # create labels for different cost assumptions
@@ -55,7 +55,7 @@ techcolors = ['black', 'saddlebrown', 'darkgray', 'saddlebrown', 'darkgray',
 
 # resimulate only if required
 if simulate:
-    np.random.seed(0)
+    #np.random.seed(1)
 
     # create dictionary to store total costs
     tcosts = {}
@@ -134,7 +134,8 @@ if simulate:
         policy_path = f'results/{label}_{sim_scenario}_policy.pth'
         model.policy.load(policy_path)
         # run multiple iterations to explore cost parameters' uncertainty
-        np.random.seed(0)
+        np.random.seed(1)
+        
         all_shares_pol = []
         for n in range(nsim):
             # for each cost assumption, compute total costs
@@ -164,6 +165,123 @@ if simulate:
         
         
         if scenario == sim_scenario :
+
+
+            if new_sharebox:
+                print('shart sharebox')
+
+                # 是否画 exogenous 结果的开关
+                plot_exogenous = False
+
+                # 关注四种技术
+                techs_focus = [
+                    'solar pv electricity',
+                    'wind electricity',
+                    'SMR electricity',
+                    'SMR2 electricity'
+                ]
+                # 选择年份
+                plot_years = [2030, 2070]
+
+                # 若无exogenous数据且需要画exogenous，安全退出避免报错
+                if plot_exogenous and len(all_shares_exo) == 0:
+                    print('Warning: all_shares_exo is empty. Skipping new_sharebox plotting.')
+                else:
+                    # 准备policy数据：每个仿真一行
+                    policy_shares = {
+                        y: pd.DataFrame([df.loc[y] for df in all_shares_pol])
+                        for y in plot_years
+                    }
+
+                    # 如需画 exogenous，取第一个仿真（exo路径唯一）
+                    if plot_exogenous:
+                        exo_share_df = all_shares_exo[0]
+
+                    # 单个图上并排展示每个tech在两个年份的box
+                    fig, ax = plt.subplots(figsize=(14, 7))
+                    colors = {
+                        'solar pv electricity': 'orange',
+                        'wind electricity': 'deepskyblue',
+                        'SMR electricity': 'steelblue',
+                        'SMR2 electricity': 'purple',   # 新颜色
+                    }
+
+                    base_positions = np.arange(1, len(techs_focus) + 1)
+                    offset = 0.18
+                    positions_2030 = base_positions - offset
+                    positions_2070 = base_positions + offset
+
+                    data_2030 = [policy_shares[2030][t] for t in techs_focus]
+                    data_2070 = [policy_shares[2070][t] for t in techs_focus]
+
+                    box2030 = ax.boxplot(
+                        data_2030,
+                        positions=positions_2030,
+                        widths=0.32,
+                        patch_artist=True
+                    )
+                    for patch, t in zip(box2030['boxes'], techs_focus):
+                        patch.set_facecolor(colors[t])
+                        patch.set_alpha(0.7)
+
+                    box2070 = ax.boxplot(
+                        data_2070,
+                        positions=positions_2070,
+                        widths=0.32,
+                        patch_artist=True
+                    )
+                    for patch, t in zip(box2070['boxes'], techs_focus):
+                        patch.set_facecolor(colors[t])
+                        patch.set_alpha(0.4)
+
+                    if plot_exogenous:
+                        exo_values_2030 = [exo_share_df.loc[2030][t] for t in techs_focus]
+                        exo_values_2070 = [exo_share_df.loc[2070][t] for t in techs_focus]
+                        # LP markers: both squares, same color
+                        ax.scatter(
+                            positions_2030,
+                            exo_values_2030,
+                            color='black',
+                            s=120,
+                            marker='s',
+                            label='LP(Deterministic)',
+                            zorder=10
+                        )
+                        ax.scatter(
+                            positions_2070,
+                            exo_values_2070,
+                            color='black',
+                            s=120,
+                            marker='s',
+                            zorder=10
+                        )
+
+                    ax.set_xticks(base_positions)
+                    ax.set_xticklabels(techs_focus)
+                    ax.set_title(
+                        'Generation share by technology at year 2030 VS 2070',
+                        fontsize=28,
+                        weight='bold'
+                    )
+                    ax.set_ylabel('Share of Final Energy', fontsize=24, weight='bold')
+
+                    ax.grid(axis='y', linestyle='--', alpha=0.3)
+                    ax.tick_params(axis='x', labelsize=22, pad=18)
+                    ax.tick_params(axis='y', labelsize=22)
+
+                    # 只有在画 exogenous 时才加 legend（否则只有一类 box，无 legend 也可以）
+                    if plot_exogenous:
+                        ax.legend(loc='upper right', fontsize=20)
+
+                    plt.tight_layout()
+                    fig.subplots_adjust(bottom=0.25)
+                    save_dir = f"./results/figures/{label}"
+                    os.makedirs(save_dir, exist_ok=True)
+                    plt.savefig(f"{save_dir}/share_boxplot_wind_solar_smr_smr2_grouped_2030_2070.png")
+                    plt.show()
+
+            
+
 
             if save_sharebox:
                 ## make share boxplot (end-of-century share for each tech, all simulations)

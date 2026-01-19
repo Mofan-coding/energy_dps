@@ -31,7 +31,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '122201'
+label = '011301'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -269,6 +269,7 @@ if simulate:
     model.policy.load(policy_path)
     # run multiple iterations to explore cost parameters' uncertainty
     np.random.seed(0)
+
     all_shares = []
 
     all_costs_policy = []
@@ -642,13 +643,13 @@ if simulate:
 
     # #### ------ Policy
 
-    plot_final_energy_by_source(all_q_policy[idx_min_policy], label, "Policy: Final Energy (Lowest lr)", name="policy_lowest_lr_final_energy")
-    plot_all_tech_costs(all_c_policy[idx_min_policy], label, "Policy: All Tech Costs (Lowest lr)", name="policy_lowest_lr_all_tech_costs")
-    plot_q_vs_time(all_q_policy[idx_min_policy], label, "Policy: q vs Time (Lowest lr)", name="policy_lowest_lr_q_vs_time")
+    # plot_final_energy_by_source(all_q_policy[idx_min_policy], label, "Policy: Final Energy (Lowest lr)", name="policy_lowest_lr_final_energy")
+    # plot_all_tech_costs(all_c_policy[idx_min_policy], label, "Policy: All Tech Costs (Lowest lr)", name="policy_lowest_lr_all_tech_costs")
+    # plot_q_vs_time(all_q_policy[idx_min_policy], label, "Policy: q vs Time (Lowest lr)", name="policy_lowest_lr_q_vs_time")
 
-    plot_final_energy_by_source(all_q_policy[idx_max_policy], label, "Policy: Final Energy (Highest lr)", name="policy_highest_lr_final_energy")
-    plot_all_tech_costs(all_c_policy[idx_max_policy], label, "Policy: All Tech Costs (Highest lr)", name="policy_highest_lr_all_tech_costs")
-    plot_q_vs_time(all_q_policy[idx_max_policy], label, "Policy: q vs Time (Highest lr)", name="policy_highest_lr_q_vs_time")
+    # plot_final_energy_by_source(all_q_policy[idx_max_policy], label, "Policy: Final Energy (Highest lr)", name="policy_highest_lr_final_energy")
+    # plot_all_tech_costs(all_c_policy[idx_max_policy], label, "Policy: All Tech Costs (Highest lr)", name="policy_highest_lr_all_tech_costs")
+    # plot_q_vs_time(all_q_policy[idx_max_policy], label, "Policy: q vs Time (Highest lr)", name="policy_highest_lr_q_vs_time")
   
 
 
@@ -656,7 +657,131 @@ if simulate:
 
 
 
+# === New function: plot_policy_tj_cost_top10 ===
+# 按两种基准分别取“第10高”学习率场景，并各自输出两类图，共6个独立文件：
+# 1) 轨迹（final energy by source）：
+#    - solar 第10高 LR 的轨迹 -> policy_top10_solar_final_energy.png
+#    - smr 第10高 LR 的轨迹   -> policy_top10_smr_final_energy.png
+#    - smr2 第10高 LR 的轨迹   -> policy_top10_smr_final_energy.png
+# 2) 成本演化（Solar & SMR 两条线）：
+#    - solar 第10高 LR 的成本演化 -> policy_top10_solar_cost_evolution.png
+#    - smr 第10高 LR 的成本演化   -> policy_top10_smr_cost_evolution.png
+#    - smr2 第10高 LR 的成本演化   -> policy_top10_smr_cost_evolution.png
 
+def plot_policy_tj_cost_top10(tech='SMR electricity', rank=10):
+    """
+    为 policy 结果基于指定技术的学习率，选取第 rank 高的样本索引，
+    针对所选技术生成两张图：
+      - Final energy by source（轨迹，2020-2070，无图例，标题：DPS:“所选的tech”dominant）
+      - 成本演化（2020-2070，Solar + SMR + SMR2 三条线）
+    """
+    if len(all_omega_policy) == 0:
+        print('No policy results available.')
+        return
+
+    years = range(model.y0, model.yend + 1)
+    save_dir = f'results/figures/{label}/smr_top10'
+    os.makedirs(save_dir, exist_ok=True)
+
+    tech_input = tech.strip().lower()
+    tech_solar_key = 'solar pv electricity'
+    tech_smr_key = 'SMR electricity'
+    tech_smr2_key = 'SMR2 electricity'
+
+    # 允许三种基准：solar / SMR / SMR2
+    if tech_input in ['solar', 'solar pv electricity','solar electricity']:
+        base_tech_key = tech_solar_key
+        base_tag = 'Solar'
+    elif tech_input in ['smr', 'smr electricity', 'small modular reactor', 'small modular reactor electricity']:
+        base_tech_key = tech_smr_key
+        base_tag = 'SMR'
+    elif tech_input in ['smr2', 'smr2 electricity', 'small modular reactor2', 'small modular reactor 2']:
+        base_tech_key = tech_smr2_key
+        base_tag = 'SMR2'
+    else:
+        print(f'Unknown tech: {tech}. Use "solar", "SMR" or "SMR2".')
+        return
+
+    # 按所选技术的 omega 排序，取第 rank 高
+    lr_base = np.array([omega.get(base_tech_key, np.nan) for omega in all_omega_policy])
+    valid_idx = np.where(~np.isnan(lr_base))[0]
+    if len(valid_idx) < rank:
+        print(f'Not enough valid policy samples for {base_tag} rank={rank}.')
+        return
+    sorted_desc = valid_idx[np.argsort(lr_base[valid_idx])[::-1]]
+    idx_base_topN = int(sorted_desc[rank-1])
+
+    # === 图 1：Final energy by source（2020-2070，无 legend）===
+    q_dict = all_q_policy[idx_base_topN]
+    df = pd.DataFrame(q_dict, index=years, columns=q_dict.keys())
+    cols = df.columns[[not(x) in ['qgrid','qtransport','electricity networks','electrolyzers'] for x in df.columns]]
+    df = df[cols]
+    colors = [
+        'black','saddlebrown','darkgray',
+        'saddlebrown','darkgray',
+        'magenta','royalblue',
+        'forestgreen','deepskyblue',
+        'orange','steelblue',   # solar, SMR
+        'purple',               # SMR2
+        'pink',
+        'plum','lawngreen','burlywood'
+    ]
+    fig1, ax1 = plt.subplots(figsize=(12,6))
+    df.plot.area(stacked=True, lw=0, ax=ax1, color=colors, legend=False)
+    ax1.set_title(f'DPS: {base_tag} dominant', fontsize=28, weight='bold')
+    ax1.set_xlim(2020, 2070)
+    ax1.set_ylim(0, 1500)
+    ax1.set_ylabel('Generation(EJ)', fontsize=24, weight='bold')
+    ax1.set_xlabel('Year', fontsize=24, weight='bold')
+    ax1.tick_params(axis='x', labelsize=22)
+    ax1.tick_params(axis='y', labelsize=22)
+    plt.tight_layout()
+    fig1.savefig(f'{save_dir}/policy_top{rank}_{base_tag.lower()}_final_energy.png',
+                 dpi=300, bbox_inches='tight')
+    plt.close(fig1)
+
+    # === 图 2：成本演化（Solar + SMR + SMR2 三条线）===
+    c_dict = all_c_policy[idx_base_topN]
+    fig2, ax2 = plt.subplots(figsize=(12,6))
+    years_list = list(years)
+
+    # Solar 从 2020 开始
+    solar_cost = np.array(c_dict.get(tech_solar_key, [np.nan]*len(years_list)))
+    # SMR 从 2030 开始
+    smr_cost = np.array(c_dict.get(tech_smr_key, [np.nan]*len(years_list)))
+    smr_mask = np.array(years_list) < 2030
+    smr_cost[smr_mask] = np.nan
+    # SMR2 从 2030 开始
+    smr2_cost = np.array(c_dict.get(tech_smr2_key, [np.nan]*len(years_list)))
+    smr2_mask = np.array(years_list) < 2030
+    smr2_cost[smr2_mask] = np.nan
+
+    ax2.plot(years_list, solar_cost, label='Solar PV', color='tab:orange', linewidth=4)
+    ax2.plot(years_list, smr_cost,   label='SMR (≥2030)',  color='tab:blue',   linewidth=4)
+    ax2.plot(years_list, smr2_cost,  label='SMR2 (≥2030)', color='purple',     linewidth=4)
+
+    ax2.set_title('Cost Evolution Over Time', fontsize=28, weight='bold')
+    ax2.set_xlabel('Year', fontsize=24, weight='bold')
+    ax2.set_ylabel('Unit Cost (USD/GJ)', fontsize=24, weight='bold')
+    ax2.set_xlim(2020, 2070)
+    ax2.tick_params(axis='x', labelsize=22)
+    ax2.tick_params(axis='y', labelsize=22)
+    ax2.legend(loc='best', fontsize=22, frameon=False)
+
+    plt.tight_layout()
+    fig2.savefig(f'{save_dir}/policy_top{rank}_{base_tag.lower()}_cost_evolution.png',
+                 dpi=300, bbox_inches='tight')
+    plt.close(fig2)
+
+    print(f'{base_tag} {rank}th highest LR index: {idx_base_topN}, LR={lr_base[idx_base_topN]:.6f}')
+
+
+# # 调用示例：现在函数只接受1个技术参数+rank，并仅输出该技术的两张图
+try:
+     for rr in range(11,50):
+        plot_policy_tj_cost_top10('smr electricity', rank=rr) # solar rank5; smr: rank 5， smr5:rank5
+except Exception as e:
+    print('plot_policy_tj_cost_top10 failed:', e)
 
 
 
