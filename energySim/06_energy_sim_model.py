@@ -12,9 +12,9 @@ from scipy.optimize import linprog
 
 
 ##### test 
-# 1114 05energy_sim_model
+# 0113/26 06energy_sim_model
 
-# add new technology: SMR! 
+# add a second new uncertain tech: SMR2! 
 
 # let policy decide electrolyzer, and multi-stage and p2x together to meet VRE
 # use Way's stochastic Wright's Law
@@ -40,13 +40,14 @@ class EnergyModel:
               'gas electricity','nuclear electricity',
               'hydroelectricity','biopower electricity',
               'wind electricity','solar pv electricity','SMR electricity',
+              'SMR2 electricity',
               'daily batteries','multi-day storage',
               'electrolyzers','electricity networks', 'P2X']
         
         self.elec_gen_techs = [
             'coal electricity','gas electricity','nuclear electricity',
             'hydroelectricity','biopower electricity',
-            'wind electricity','solar pv electricity','SMR electricity'
+            'wind electricity','solar pv electricity','SMR electricity','SMR2 electricity'
         ]
 
         self.carrier = ['oil','coal','gas','electricity','P2Xfuels']
@@ -54,7 +55,7 @@ class EnergyModel:
 
         # mapping flows from inputs to outputs
         # technology to carriers 
-        self.carrierInputs = [[0],[1],[2],[3,4,5,6,7,8,9]]
+        self.carrierInputs = [[0],[1],[2],[3,4,5,6,7,8,9,10,11]]
         # carriers to sectors
         self.sectorInputs = [[0,3,4],[0,1,2,3,4],[0,1,2,3,4],[3]]
 
@@ -231,7 +232,7 @@ class EnergyModel:
         self.costparams = costparams
 
         # set learning rate technologies
-        self.learningRateTechs = self.technology[5:14]
+        self.learningRateTechs = self.technology[5:15]
 
         # initialize cost dictionaries
         self.gridInv = np.zeros(self.yend - self.y0 + 1)
@@ -250,7 +251,7 @@ class EnergyModel:
         self.omega = {}
 
         # for each technology
-        for t in self.technology[:14]:
+        for t in self.technology[:15]:
         
             #initialize production and unit cost arrays and 
             self.z[t] = np.zeros(self.yend - self.y0 + 1)
@@ -282,7 +283,7 @@ class EnergyModel:
 
     def sample_uncertainties(self):
 
-        for t in self.technology[:14]:
+        for t in self.technology[:15]:
 
             self.omega[t] = 0.0
 
@@ -795,7 +796,7 @@ class EnergyModel:
             self.step()
 
         # compute total cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:15]:
             for y in range(self.y0, self.yend+1):
                 if t not in self.learningRateTechs:
                     self.C[t][y-self.y0] = \
@@ -816,12 +817,12 @@ class EnergyModel:
                                     for tau in range(self.y0, y+1)])
 
         # adding grid costs (which are in billion USD)
-        self.C[self.technology[14]] = self.gridInv * 1e9                
+        self.C[self.technology[15]] = self.gridInv * 1e9                
 
         # compute total cost
         self.totalCost = np.zeros(self.yend - self.y0 + 1)
         for y in range(self.y0, self.yend+1):
-            for t in self.technology[:15]:
+            for t in self.technology[:16]:
                 self.totalCost[y-self.y0] += self.C[t][y-self.y0]
             # check if there is any demand deficitf
             total_elec_supply = sum(self.q[t][y-self.y0] for t in self.elec_gen_techs)
@@ -1078,6 +1079,7 @@ class EnergyModel:
             techs = [self.technology[x] for x in self.carrierInputs[self.carrier.index('electricity')]]
             techs.append('electrolyzers')
             techs.append('SMR electricity')
+            techs.append('SMR2 electricity')
 
             for t in techs:
 
@@ -1093,8 +1095,9 @@ class EnergyModel:
 
                 # decide every year 
                 year_idx = self.y - self.y0
-                 # SMR 只允许 2030 年起上线：
-                if t == 'SMR electricity':
+                 # SMR/SMR2 只允许 2030 年起上线：
+                if t in ['SMR electricity', 'SMR2 electricity']:
+            
                     # 本年决策写入下一年格子：q[t][year_idx+1]
                     # 因此在 2020..2028 年（self.y <= 2028）把下一年置 0
                     if self.y <= 2028:
@@ -1139,6 +1142,8 @@ class EnergyModel:
                 ## linear policy
                 gt = self.policy.get_action(pol_input)
                 gt = min(1.0, gt)
+                gt = max(0.0, gt)  # cannot early retirement
+                
                 qp = self.q[t][self.y-self.y0]
                 qf = qp * (1 + gt)
                 #qf = min(qp * (1 + gt), maxcap)  # if want to add generation cap for tech
@@ -1407,7 +1412,7 @@ class EnergyModel:
             #             sum(self.Q[t][self.y-self.y0])
 
         # compute unit cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:15]:
 
             # update cumulative production
             self.z[t][self.y+1-self.y0] = \
@@ -1505,6 +1510,8 @@ class EnergyModel:
         idx2030 = 2030 - self.y0
         self.c['SMR electricity'][idx2030] = self.costparams['c0']['SMR electricity']
         self.z['SMR electricity'][idx2030] = 0.058
+        self.c['SMR2 electricity'][idx2030] = self.costparams['c0']['SMR2 electricity']
+        self.z['SMR2 electricity'][idx2030] = 0.058
 
         
         # advance time counter
@@ -1572,7 +1579,7 @@ class EnergyModel:
         # compute unit cost of technologies
 
         # for each technology
-        for t in self.technology[:14]:
+        for t in self.technology[:15]:
                 
             # iterate over the years
             for y in range(self.y0, self.yend):
@@ -1702,7 +1709,7 @@ class EnergyModel:
                                         0.19 * self.u[t][y-self.y0]))
 
         # compute total cost of technologies
-        for t in self.technology[:14]:
+        for t in self.technology[:15]:
             for y in range(self.y0, self.yend+1):
                 if t not in self.learningRateTechs:
                     self.C[t][y-self.y0] = \
@@ -1723,12 +1730,12 @@ class EnergyModel:
                                     for tau in range(self.y0, y+1)])
 
         # adding grid costs (which are in billion USD)
-        self.C[self.technology[14]] = self.gridInv * 1e9
+        self.C[self.technology[15]] = self.gridInv * 1e9
 
         # compute total cost
         self.totalCost = np.zeros(self.yend - self.y0 + 1)
         for y in range(self.y0, self.yend+1):
-            for t in self.technology[:15]:
+            for t in self.technology[:16]:
                 self.totalCost[y-self.y0] += self.C[t][y-self.y0]
 
         # compute discounted cost

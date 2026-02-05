@@ -31,7 +31,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '011301'
+label = '122201'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
@@ -716,16 +716,27 @@ def plot_policy_tj_cost_top10(tech='SMR electricity', rank=10):
     df = pd.DataFrame(q_dict, index=years, columns=q_dict.keys())
     cols = df.columns[[not(x) in ['qgrid','qtransport','electricity networks','electrolyzers'] for x in df.columns]]
     df = df[cols]
+    # colors = [
+    #     'black','saddlebrown','darkgray',
+    #     'saddlebrown','darkgray',
+    #     'magenta','royalblue',
+    #     'forestgreen','deepskyblue',
+    #     'orange','steelblue',   # solar, SMR
+    #     'purple',               # SMR2
+    #     'pink',
+    #     'plum','lawngreen','burlywood'
+    # ]
     colors = [
         'black','saddlebrown','darkgray',
         'saddlebrown','darkgray',
         'magenta','royalblue',
         'forestgreen','deepskyblue',
         'orange','steelblue',   # solar, SMR
-        'purple',               # SMR2
         'pink',
         'plum','lawngreen','burlywood'
     ]
+
+
     fig1, ax1 = plt.subplots(figsize=(12,6))
     df.plot.area(stacked=True, lw=0, ax=ax1, color=colors, legend=False)
     ax1.set_title(f'DPS: {base_tag} dominant', fontsize=28, weight='bold')
@@ -778,11 +789,153 @@ def plot_policy_tj_cost_top10(tech='SMR electricity', rank=10):
 
 # # 调用示例：现在函数只接受1个技术参数+rank，并仅输出该技术的两张图
 try:
-     for rr in range(11,50):
+    for rr in range(1,50):
         plot_policy_tj_cost_top10('smr electricity', rank=rr) # solar rank5; smr: rank 5， smr5:rank5
 except Exception as e:
     print('plot_policy_tj_cost_top10 failed:', e)
 
 
 
-       
+
+########
+# new plot function: make smrs area plot
+
+def plot_smrs_cost_top10(tech='SMR electricity', rank=10):
+    """
+    基于指定技术的学习率，选取第 rank 高的样本，
+    画一张图：
+      - 左轴：Solar / SMR / SMR2 的 unit cost 曲线
+      - 右轴：SMR vs SMR2 在自身总和中的 generation share（面积图）
+    """
+    if len(all_omega_policy) == 0:
+        print('No policy results available.')
+        return
+
+    years = range(model.y0, model.yend + 1)
+    years_list = list(years)
+    save_dir = f'results/figures/{label}/smrs'
+    os.makedirs(save_dir, exist_ok=True)
+
+    tech_input = tech.strip().lower()
+    tech_solar_key = 'solar pv electricity'
+    tech_smr_key = 'SMR electricity'
+    tech_smr2_key = 'SMR2 electricity'
+
+    # 允许三种基准：solar / SMR / SMR2
+    if tech_input in ['solar', 'solar pv electricity', 'solar electricity']:
+        base_tech_key = tech_solar_key
+        base_tag = 'Solar'
+    elif tech_input in ['smr', 'smr electricity', 'small modular reactor', 'small modular reactor electricity']:
+        base_tech_key = tech_smr_key
+        base_tag = 'SMR'
+    elif tech_input in ['smr2', 'smr2 electricity', 'small modular reactor2', 'small modular reactor 2']:
+        base_tech_key = tech_smr2_key
+        base_tag = 'SMR2'
+    else:
+        print(f'Unknown tech: {tech}. Use "solar", "SMR" or "SMR2".')
+        return
+
+    # 按所选技术的 omega 排序，取第 rank 高
+    lr_base = np.array([omega.get(base_tech_key, np.nan) for omega in all_omega_policy])
+    valid_idx = np.where(~np.isnan(lr_base))[0]
+    if len(valid_idx) < rank:
+        print(f'Not enough valid policy samples for {base_tag} rank={rank}.')
+        return
+    sorted_desc = valid_idx[np.argsort(lr_base[valid_idx])[::-1]]
+    idx_base_topN = int(sorted_desc[rank-1])
+
+    # 取该样本的成本和发电量
+    c_dict = all_c_policy[idx_base_topN]
+    q_dict = all_q_policy[idx_base_topN]
+
+    # === 左轴：成本演化（三条线）===
+    fig, ax_cost = plt.subplots(figsize=(12, 6))
+
+    # Solar 从 2020 开始
+    solar_cost = np.array(c_dict.get(tech_solar_key, [np.nan] * len(years_list)))
+    # SMR 从 2030 开始
+    smr_cost = np.array(c_dict.get(tech_smr_key, [np.nan] * len(years_list)))
+    smr_mask = np.array(years_list) < 2030
+    smr_cost[smr_mask] = np.nan
+    # SMR2 从 2030 开始
+    smr2_cost = np.array(c_dict.get(tech_smr2_key, [np.nan] * len(years_list)))
+    smr2_mask = np.array(years_list) < 2030
+    smr2_cost[smr2_mask] = np.nan
+
+    ax_cost.plot(years_list, solar_cost, label='Solar PV',  color='tab:orange', linewidth=4)
+    ax_cost.plot(years_list, smr_cost,   label='SMR (≥2030)',  color='tab:blue',   linewidth=4)
+    ax_cost.plot(years_list, smr2_cost,  label='SMR2 (≥2030)', color='purple',     linewidth=4)
+
+    ax_cost.set_title('Cost Evolution with SMR/SMR2 Share Background',
+                      fontsize=28, weight='bold')
+    ax_cost.set_xlabel('Year', fontsize=24, weight='bold')
+    ax_cost.set_ylabel('Unit Cost (USD/GJ)', fontsize=24, weight='bold')
+    ax_cost.set_xlim(2020, 2070)
+    ax_cost.tick_params(axis='x', labelsize=22)
+    ax_cost.tick_params(axis='y', labelsize=22)
+
+    # === 右轴：SMR vs SMR2 generation share（相对自身之和）===
+    # q_dict 中存的是各技术的年度发电量（EJ）
+    smr_gen = np.array(q_dict.get(tech_smr_key, [0.0] * len(years_list)))
+    smr2_gen = np.array(q_dict.get(tech_smr2_key, [0.0] * len(years_list)))
+    total_gen = smr_gen + smr2_gen
+
+    # 避免 0 除：total_gen==0 的年份，不画 share（设为 NaN）
+    share_smr = np.zeros_like(total_gen, dtype=float)
+    share_smr2 = np.zeros_like(total_gen, dtype=float)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        share_smr = np.where(total_gen > 0, smr_gen / total_gen, np.nan)
+        share_smr2 = np.where(total_gen > 0, smr2_gen / total_gen, np.nan)
+
+    # 2030 年前不画（两者都几乎为 0）
+    mask_share = np.array(years_list) >= 2030
+    years_share = np.array(years_list)[mask_share]
+    share_smr_plot = share_smr[mask_share]
+    share_smr2_plot = share_smr2[mask_share]
+
+    ax_share = ax_cost.twinx()
+    ax_share.set_ylim(0, 1.0)
+    ax_share.set_ylabel('SMR vs SMR2 Share', fontsize=20, weight='bold')
+    ax_share.tick_params(axis='y', labelsize=20)
+
+    # 背景面积图：SMR（蓝，稍透明） + SMR2（紫，稍透明）
+    ax_share.stackplot(
+        years_share,
+        share_smr_plot,
+        share_smr2_plot,
+        labels=['SMR share', 'SMR2 share'],
+        colors=['tab:blue', 'purple'],
+        alpha=0.18,  # 透明度，避免盖住成本线
+    )
+
+    # 合并图例：左轴成本线 + 右轴 share
+    # 先取两个轴的 handle + label
+    handles_cost, labels_cost = ax_cost.get_legend_handles_labels()
+    handles_share, labels_share = ax_share.get_legend_handles_labels()
+    # 合在一起去重
+    handles = handles_cost + handles_share
+    labels_all = labels_cost + labels_share
+    # 简单去重保持顺序
+    seen = set()
+    handles_unique = []
+    labels_unique = []
+    for h, lab in zip(handles, labels_all):
+        if lab not in seen:
+            seen.add(lab)
+            handles_unique.append(h)
+            labels_unique.append(lab)
+    ax_cost.legend(handles_unique, labels_unique,
+                   loc='best', fontsize=18, frameon=False)
+
+    plt.tight_layout()
+    fig.savefig(f'{save_dir}/smrs_cost_share_top{rank}_{base_tag.lower()}_idx{idx_base_topN}.png',
+                dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+    print(f'[plot_smrs_cost_top10] {base_tag} rank={rank}, idx={idx_base_topN}, LR={lr_base[idx_base_topN]:.6f}')    
+
+# try:
+#     # 比如画 SMR 学习率第 5 高的那条路径的成本 + SMR/SMR2 share 背景
+#     plot_smrs_cost_top10('SMR electricity', rank=3)
+# except Exception as e:
+#     print('plot_smrs_cost_top10 failed:', e)  

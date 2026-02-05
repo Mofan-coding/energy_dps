@@ -26,7 +26,7 @@ simulate = True
 # used only if new simulations are run
 
 nsim =100
-label = '011301'
+label = '011903'
 sim_scenario = 'fast transition'
 
 gt_clip = 1
