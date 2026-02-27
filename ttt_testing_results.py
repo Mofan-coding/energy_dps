@@ -680,7 +680,8 @@ def plot_policy_tj_cost_top10(tech='SMR electricity', rank=10):
         return
 
     years = range(model.y0, model.yend + 1)
-    save_dir = f'results/figures/{label}/smr_top10'
+    #save_dir = f'results/figures/{label}/smr_top10'
+    save_dir = f'results/figures/{label}'
     os.makedirs(save_dir, exist_ok=True)
 
     tech_input = tech.strip().lower()
@@ -786,14 +787,41 @@ def plot_policy_tj_cost_top10(tech='SMR electricity', rank=10):
 
     print(f'{base_tag} {rank}th highest LR index: {idx_base_topN}, LR={lr_base[idx_base_topN]:.6f}')
 
+    # === 图 3：Solar & SMR generation share 时间序列 ===
+    # 只用 solar + SMR 的 generation
+    solar_gen = np.array(q_dict.get(tech_solar_key, [0.0] * len(years_list)))
+    smr_gen   = np.array(q_dict.get(tech_smr_key,   [0.0] * len(years_list)))
+    total_gen = solar_gen + smr_gen
+
+
+    fig3, ax3 = plt.subplots(figsize=(12,6))
+    ax3.plot(years_list, solar_gen, label='Solar generation', color='tab:orange', linewidth=4)
+    ax3.plot(years_list, smr_gen,   label='SMR generation',   color='tab:blue',   linewidth=4)
+
+    ax3.set_title('Solar vs SMR Generation Over Time', fontsize=28, weight='bold')
+    ax3.set_xlabel('Year', fontsize=24, weight='bold')
+    ax3.set_ylabel('Generation (EJ)', fontsize=24, weight='bold')
+    ax3.set_xlim(2020, 2070)
+    # 你可以按需要设 y 轴范围，比如：
+    # ax3.set_ylim(0, 500)
+    ax3.tick_params(axis='x', labelsize=22)
+    ax3.tick_params(axis='y', labelsize=22)
+    ax3.legend(loc='best', fontsize=22, frameon=False)
+
+    plt.tight_layout()
+    fig3.savefig(f'{save_dir}/policy_top{rank}_{base_tag.lower()}_solar_smr_qtimeseries.png',
+                 dpi=300, bbox_inches='tight')
+    plt.close(fig3)
+
+    print(f'{base_tag} {rank}th highest LR index: {idx_base_topN}, LR={lr_base[idx_base_topN]:.6f}')
 
 # # 调用示例：现在函数只接受1个技术参数+rank，并仅输出该技术的两张图
-try:
-    for rr in range(1,50):
-        plot_policy_tj_cost_top10('smr electricity', rank=rr) # solar rank5; smr: rank 5， smr5:rank5
-except Exception as e:
-    print('plot_policy_tj_cost_top10 failed:', e)
-
+# try:
+#     for rr in range(1,50):
+#         plot_policy_tj_cost_top10('smr electricity', rank=rr) # solar rank5; smr: rank 5， smr5:rank5
+# except Exception as e:
+#     print('plot_policy_tj_cost_top10 failed:', e)
+plot_policy_tj_cost_top10('smr electricity', rank=29)
 
 
 

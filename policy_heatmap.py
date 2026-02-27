@@ -26,8 +26,8 @@ import numpy as np
 import energySim._energy_sim_model as _energy_sim_model
 import energySim._energy_sim_params as _energy_sim_params
 
-label = '011301'
-scenario = 'fast transition'
+label = '020502'
+scenario = 'slow transition'
 policy_path = f'results/{label}_{scenario}_policy.pth'
 nsim = 100
 gt_clip = 1

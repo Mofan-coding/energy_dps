@@ -1140,7 +1140,7 @@ class EnergyModel:
                 gt = self.policy.get_action(pol_input)
                 
                 gt = min(1.0, gt)
-                #gt = max(0.0, gt)  # 训练的时候没有这个限制，simulate的时候有 cannot early retirement
+                gt = max(0.0, gt)  # 训练的时候没有这个限制，simulate的时候有 cannot early retirement
                 
                 qp = self.q[t][self.y-self.y0]
                 qf = qp * (1 + gt)
